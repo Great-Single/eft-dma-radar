@@ -1,5 +1,9 @@
 # EFT DMA Radar
-This is a work in progress and has not been optimized/finished.
+This is a work in progress and has not been optimized/finished. There are a few known issues and this isn't 100% stable. Crashes *can* occur.
+
+**Status:** Project on Hold - It works as of 1/6/2022 but in the future offsets may need to be updated.
+
+[UC Forum Thread](https://www.unknowncheats.me/forum/escape-from-tarkov/482418-2d-map-dma-radar-wip.html)
 
 ### Instructions
 1. You need a DMA Device (Screamer, Raptor DMA,etc.) installed on your game PC with (hopefully) good/safe firmware. Don't ask me how.
