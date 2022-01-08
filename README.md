@@ -1,7 +1,7 @@
 # EFT DMA Radar
 This is a work in progress and has not been optimized/finished. There are a few known issues and this isn't 100% stable. Crashes *can* occur.
 
-**Status:** Project on Hold - It works as of 1/6/2022 but in the future offsets may need to be updated.
+**Status:** Project on Hold - It works as of 1/8/2022 but in the future offsets may need to be updated.
 
 [UC Forum Thread](https://www.unknowncheats.me/forum/escape-from-tarkov/482418-2d-map-dma-radar-wip.html)
 
@@ -27,4 +27,4 @@ Customs.JSON
 ```
 
 ### Demo
-![Demo](https://user-images.githubusercontent.com/42287509/148459354-fcff5a1c-0006-4312-88af-7889270bfd4a.png)
+![Demo](https://user-images.githubusercontent.com/42287509/148650370-8ab172e4-f303-4897-96ca-b690afa897b2.png)
