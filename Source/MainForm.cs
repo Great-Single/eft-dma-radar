@@ -112,8 +112,8 @@ namespace eft_dma_radar
         private Bitmap GetRender(Player currentPlayer)
         {
             int strokeLength = 16;
-            int fontSize = 26;
-            int strokeWidth = 9; // Lower constant = wider stroke
+            int fontSize = 18;
+            int strokeWidth = 6;
 
             MapPosition currentPlayerPos;
             Vector3 currentPlayerRawPos;

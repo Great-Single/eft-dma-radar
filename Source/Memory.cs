@@ -48,11 +48,12 @@ namespace eft_dma_radar
                     && GetModuleBase()
                     )
                     {
+                        Console.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
                         break;
                     }
                     else
                     {
-                        Console.WriteLine("Unable to find game, trying again in 15 seconds...");
+                        Console.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
                         Thread.Sleep(15000);
                     }
                 }
@@ -69,7 +70,7 @@ namespace eft_dma_radar
                     }
                     catch
                     {
-                        Debug.WriteLine("Unhandled exception in game, restarting...");
+                        Debug.WriteLine("Unhandled exception in Game Loop, restarting...");
                     }
                 }
                 Console.WriteLine("Escape From Tarkov is no longer running!");

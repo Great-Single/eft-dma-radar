@@ -64,7 +64,7 @@ namespace eft_dma_radar
         }
 
         /// <summary>
-        /// Helper method to locate GOM.
+        /// Helper method to locate Game World object.
         /// </summary>
         private ulong GetObjectFromList(ulong listPtr, ulong lastObjectPtr, string objectName)
         {
@@ -75,21 +75,25 @@ namespace eft_dma_radar
             {
                 while (activeObject.obj != 0x0 && activeObject.obj != lastObject.obj)
                 {
-                    var classNamePtr = activeObject.obj + 0x60;
-
-                    var memStr = _mem.ReadString(_mem.ReadPtr(classNamePtr), 64);
-
-                    if (memStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        Debug.WriteLine($"Found object {memStr}");
-                        return activeObject.obj;
+                        var objectNamePtr = _mem.ReadPtr(activeObject.obj + 0x60);
+                        var objectNameStr = _mem.ReadString(objectNamePtr, 24);
+                        if (objectNameStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Debug.WriteLine($"Found object {objectNameStr}");
+                            return activeObject.obj;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"ERROR parsing object name, moving onto next: {ex}");
                     }
 
                     activeObject = _mem.ReadStruct<BaseObject>(activeObject.nextObjectLink); // Read next object
                 }
-                Debug.WriteLine($"Couldn't find object {objectName}");
             }
-
+            Debug.WriteLine($"Couldn't find object {objectName}");
             return 0;
         }
 
@@ -105,16 +109,16 @@ namespace eft_dma_radar
                     _mem.ReadPtr(_gom.LastActiveNode),
                     "GameWorld");
                 if (gameWorld == 0) throw new DMAException("Unable to find GameWorld Object, likely not in raid.");
-                _localGameWorld = _mem.ReadPtrChain(gameWorld, new uint[] { 0x30, 0x18, 0x28 });
+                _localGameWorld = _mem.ReadPtrChain(gameWorld, new uint[] { 0x30, 0x18, 0x28 }); // Game world >> Local Game World
                 var rgtPlayers = new RegisteredPlayers(_mem, _mem.ReadPtr(_localGameWorld + 0x80));
-                if (rgtPlayers.PlayerCount > 1)
+                if (rgtPlayers.PlayerCount > 1) // Make sure not in hideout,etc.
                 {
                     _rgtPlayers = rgtPlayers;
                     return true;
                 }
                 else
                 {
-                    Debug.WriteLine("Local Game World does not contain players (hideout?)");
+                    Debug.WriteLine("ERROR - Local Game World does not contain players (hideout?)");
                     return false;
                 }
             }
