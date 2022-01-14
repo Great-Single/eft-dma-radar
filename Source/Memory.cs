@@ -35,7 +35,7 @@ namespace eft_dma_radar
             try
             {
                 Debug.WriteLine("Loading memory module...");
-                if (!vmm.Initialize("-printf", "-v", "-device", "FPGA")) // Initialize DMA device
+                if (!vmm.Initialize("-printf", "-v", "-device", "FPGA", "-memmap", "mmap.txt")) // Initialize DMA device
                     throw new DMAException("ERROR initializing DMA Device!");
                 Debug.WriteLine("Starting Memory worker thread...");
                 _worker = new Thread(() => Worker()) { IsBackground = true };

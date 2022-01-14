@@ -22,6 +22,8 @@ namespace eft_dma_radar
         private int _mapIndex = 0;
         private Map _currentMap; // Current Selected Map
         private Bitmap _currentRender; // Currently rendered frame
+
+        private const int _maxZoom = 3500;
         private Player CurrentPlayer
         {
             get
@@ -105,13 +107,17 @@ namespace eft_dma_radar
 
         /// <summary>
         /// Draws next render frame and returns a completed Bitmap.
-        /// ToDo - ReIntroduce Zooming
         /// </summary>
         private Bitmap GetRender(Player currentPlayer)
         {
-            int strokeLength = 16;
-            int fontSize = 18;
-            int strokeWidth = 6;
+            int zoom = (int)(_maxZoom * (.01f * trackBar_Zoom.Value)); // Get zoom level
+            double aspect = (double)mapCanvas.Width / (double)mapCanvas.Height; // Get aspect ratio of drawing canvas (ex. 16:9)
+            int strokeLength = zoom / 125; // Lower constant = longer stroke
+            int fontSize = zoom / 100;
+            if (fontSize < 8) fontSize = 8;
+            if (strokeLength < 5) strokeLength = 5; // Min value
+            int strokeWidth = zoom / 300; // Lower constant = wider stroke
+            if (strokeWidth < 4) strokeWidth = 4; // Min value
 
             MapPosition currentPlayerPos;
             Vector3 currentPlayerRawPos;
@@ -123,6 +129,15 @@ namespace eft_dma_radar
                 label_Pos.Text = $"X: {currentPlayer.Position.X}\r\nY: {currentPlayer.Position.Y}\r\nZ: {currentPlayer.Position.Z}";
             }
             currentPlayerPos = VectorToMapPos(currentPlayerRawPos);
+            // Get map frame bounds (Based on Zoom Level, centered on Current Player)
+            var xZoom = (int)Math.Round(zoom * aspect);
+            var xPos = currentPlayerPos.X - xZoom / 2;
+            if (xPos < 0) xPos = 0;
+            var yPos = currentPlayerPos.Y - zoom / 2;
+            if (yPos < 0) yPos = 0;
+            if (xZoom > _currentMap.MapFile.Width) xZoom = _currentMap.MapFile.Width;
+            if (zoom > _currentMap.MapFile.Height) zoom = _currentMap.MapFile.Height;
+            var bounds = new Rectangle(xPos, yPos, xZoom, zoom);
 
             var render = (Bitmap)_currentMap.MapFile.Clone(); // Get a fresh map to draw on
             using (var drawFont = new Font("Arial", fontSize, FontStyle.Bold))
@@ -205,7 +220,24 @@ namespace eft_dma_radar
                     }
                     /// ToDo - Handle Loot/Items
                 }
-                return render; // Return the portion of the map to be rendered based on Zoom Level
+                return CropImage(render, bounds); // Return the portion of the map to be rendered based on Zoom Level
+            }
+        }
+
+        /// <summary>
+        /// Provide a zoomed bitmap.
+        /// </summary>
+        private static Bitmap CropImage(Bitmap source, Rectangle bounds)
+        {
+            try
+            {
+                Bitmap cropped = source.Clone(bounds, source.PixelFormat);
+                return cropped;
+            }
+            catch (OutOfMemoryException) { return null; }
+            finally
+            {
+                Recycler.Bitmaps.Add(source);
             }
         }
 
@@ -253,6 +285,21 @@ namespace eft_dma_radar
                 Memory.Shutdown();
             }
             finally { base.OnFormClosing(e); }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == (Keys.F1))
+            {
+                if (trackBar_Zoom.Value - 5 > 1) trackBar_Zoom.Value-=5;
+                return true;
+            }
+            else if (keyData == (Keys.F2))
+            {
+                if (trackBar_Zoom.Value + 5 < 100) trackBar_Zoom.Value+=5;
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

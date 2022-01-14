@@ -30,21 +30,24 @@
         {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.label_Pos = new System.Windows.Forms.Label();
             this.mapCanvas = new System.Windows.Forms.PictureBox();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.trackBar_Zoom = new System.Windows.Forms.TrackBar();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.trackBar_EnemyAim = new System.Windows.Forms.TrackBar();
             this.trackBar_AimLength = new System.Windows.Forms.TrackBar();
             this.label_Map = new System.Windows.Forms.Label();
             this.button_Map = new System.Windows.Forms.Button();
-            this.label_Pos = new System.Windows.Forms.Label();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.mapCanvas)).BeginInit();
             this.tabPage2.SuspendLayout();
             this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar_Zoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_EnemyAim)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_AimLength)).BeginInit();
             this.SuspendLayout();
@@ -72,6 +75,15 @@
             this.tabPage1.Text = "Radar";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
+            // label_Pos
+            // 
+            this.label_Pos.AutoSize = true;
+            this.label_Pos.Location = new System.Drawing.Point(9, 3);
+            this.label_Pos.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label_Pos.Name = "label_Pos";
+            this.label_Pos.Size = new System.Drawing.Size(0, 15);
+            this.label_Pos.TabIndex = 10;
+            // 
             // mapCanvas
             // 
             this.mapCanvas.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -97,6 +109,8 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.trackBar_Zoom);
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.trackBar_EnemyAim);
@@ -108,10 +122,32 @@
             this.groupBox1.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.groupBox1.Size = new System.Drawing.Size(264, 1027);
+            this.groupBox1.Size = new System.Drawing.Size(320, 1027);
             this.groupBox1.TabIndex = 8;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Radar Config";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(201, 166);
+            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(111, 15);
+            this.label1.TabIndex = 16;
+            this.label1.Text = "Zoom (F1 in F2 out)";
+            // 
+            // trackBar_Zoom
+            // 
+            this.trackBar_Zoom.LargeChange = 1;
+            this.trackBar_Zoom.Location = new System.Drawing.Point(237, 185);
+            this.trackBar_Zoom.Maximum = 100;
+            this.trackBar_Zoom.Minimum = 1;
+            this.trackBar_Zoom.Name = "trackBar_Zoom";
+            this.trackBar_Zoom.Orientation = System.Windows.Forms.Orientation.Vertical;
+            this.trackBar_Zoom.Size = new System.Drawing.Size(45, 403);
+            this.trackBar_Zoom.TabIndex = 15;
+            this.trackBar_Zoom.Value = 100;
             // 
             // label3
             // 
@@ -182,15 +218,6 @@
             this.button_Map.UseVisualStyleBackColor = true;
             this.button_Map.Click += new System.EventHandler(this.button_Map_Click);
             // 
-            // label_Pos
-            // 
-            this.label_Pos.AutoSize = true;
-            this.label_Pos.Location = new System.Drawing.Point(9, 3);
-            this.label_Pos.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label_Pos.Name = "label_Pos";
-            this.label_Pos.Size = new System.Drawing.Size(0, 15);
-            this.label_Pos.TabIndex = 10;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -207,6 +234,7 @@
             this.tabPage2.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar_Zoom)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_EnemyAim)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_AimLength)).EndInit();
             this.ResumeLayout(false);
@@ -227,6 +255,8 @@
         private Label label_Map;
         private Button button_Map;
         private Label label_Pos;
+        private Label label1;
+        private TrackBar trackBar_Zoom;
     }
 }
 
