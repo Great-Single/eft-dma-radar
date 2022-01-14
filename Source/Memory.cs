@@ -84,7 +84,7 @@ namespace eft_dma_radar
                         Debug.WriteLine($"Unhandled exception in Game Loop, restarting: {ex}");
                     }
                 }
-                Console.WriteLine("EFT is no longer running!");
+                Debug.WriteLine("Escape From Tarkov is no longer running!");
             }
         }
 

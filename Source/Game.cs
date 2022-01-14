@@ -32,7 +32,6 @@ namespace eft_dma_radar
         /// </summary>
         public void WaitForGame()
         {
-            Console.WriteLine("Waiting for raid...");
             while (true)
             {
                 if (!Memory.Heartbeat()) throw new Exception("Game is not running!");
