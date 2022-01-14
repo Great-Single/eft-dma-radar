@@ -1,12 +1,12 @@
 # EFT DMA Radar
 This is a work in progress and has not been optimized/finished. There are a few known issues and this isn't 100% stable. Crashes *can* occur.
 
-**Status:** Work-In-Progress
+**Status:** Work-In-Progress, pull requests are welcome
 
 [UC Forum Thread](https://www.unknowncheats.me/forum/escape-from-tarkov/482418-2d-map-dma-radar-wip.html)
 
 ### Instructions
-1. You need a DMA Device (Screamer, Raptor DMA,etc.) installed on your game PC with (hopefully) good/safe firmware. Don't ask me how.
+1. You need a DMA Device (Screamer, Raptor DMA,etc.) installed on your game PC with (hopefully) good/safe firmware. Don't ask me how. A memory map may also be desired (name it mmap.txt and put in the .exe directory).
 2. Build/compile the app for Release x64.
 3. Import any maps you would like to use (.PNG files only) into the \Maps sub-folder. Make sure you have a corresponding .JSON file with the same name. For example, `Customs.PNG` and `Customs.JSON`
 4. Run the program on your 2nd PC (NOT GAME PC!!!) that has the DMA USB Cable plugged into. Click the Map button to cycle through maps if you need.
