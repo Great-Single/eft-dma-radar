@@ -246,5 +246,13 @@ namespace eft_dma_radar
             label_Map.Text = _currentMap.Name;
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e) // Raised on Close()
+        {
+            try
+            {
+                Memory.Shutdown();
+            }
+            finally { base.OnFormClosing(e); }
+        }
     }
 }
