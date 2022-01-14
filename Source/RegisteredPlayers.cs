@@ -6,7 +6,6 @@ namespace eft_dma_radar
 {
     public class RegisteredPlayers
     {
-        private readonly Memory _mem;
         private readonly ulong _base;
         private readonly ulong _listBase;
         private readonly HashSet<uint> _registered;
@@ -23,15 +22,14 @@ namespace eft_dma_radar
         {
             get
             {
-                return _mem.ReadInt(_base + 0x18);
+                return Memory.ReadInt(_base + 0x18);
             }
         }
 
-        public RegisteredPlayers(Memory mem, ulong baseAddr)
+        public RegisteredPlayers(ulong baseAddr)
         {
-            _mem = mem;
             _base = baseAddr;
-            _listBase = _mem.ReadPtr(_base + 0x0010);
+            _listBase = Memory.ReadPtr(_base + 0x0010);
             _registered = new HashSet<uint>();
             _players = new ConcurrentDictionary<string, Player>();
         }
@@ -47,14 +45,14 @@ namespace eft_dma_radar
                 try
                 {
                     if (_registered.Contains(i)) continue;
-                    var playerBase = _mem.ReadPtr(_listBase + 0x20 + (i * 0x8));
-                    var playerProfile = _mem.ReadPtr(playerBase + 0x4B8);
-                    var playerId = _mem.ReadPtr(playerProfile + 0x10);
-                    var playerIdString = _mem.ReadUnityString(playerId); // Player's Personal ID ToDo Testing
-                    var player = new Player(_mem, playerBase, playerProfile); // allocate player object
+                    var playerBase = Memory.ReadPtr(_listBase + 0x20 + (i * 0x8));
+                    var playerProfile = Memory.ReadPtr(playerBase + 0x4B8);
+                    var playerId = Memory.ReadPtr(playerProfile + 0x10);
+                    var playerIdString = Memory.ReadUnityString(playerId); // Player's Personal ID ToDo Testing
+                    var player = new Player(playerBase, playerProfile); // allocate player object
                     if (_players.TryAdd(playerIdString, player)) // Add to collection
                     {
-                        Console.WriteLine($"Added new player from index {i + 1} of {count}" +
+                        Debug.WriteLine($"Added new player from index {i + 1} of {count}" +
                             $"\nBase: 0x{playerBase.ToString("X")}" +
                             $"\nID: {playerIdString}");
                         _registered.Add(i);

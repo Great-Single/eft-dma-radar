@@ -17,7 +17,6 @@ namespace eft_dma_radar
 {
     public partial class MainForm : Form
     {
-        private readonly Memory _memory; // Reference to memory module
         private readonly object _renderLock = new object();
         private readonly List<Map> _allMaps; // Contains all maps from \\Maps folder
         private int _mapIndex = 0;
@@ -27,7 +26,7 @@ namespace eft_dma_radar
         {
             get
             {
-                return _memory.Players.FirstOrDefault(x => x.Value.Type is PlayerType.CurrentPlayer).Value;
+                return Memory.Players.FirstOrDefault(x => x.Value.Type is PlayerType.CurrentPlayer).Value;
             }
         }
 
@@ -35,10 +34,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Constructor.
         /// </summary>
-        public MainForm(Memory memory)
+        public MainForm()
         {
             InitializeComponent();
-            _memory = memory;
             _allMaps = new List<Map>();
             LoadMaps();
             this.DoubleBuffered = true; // Prevent flickering
@@ -93,7 +91,7 @@ namespace eft_dma_radar
             lock (_renderLock)
             {
                 Player currentPlayer;
-                if (_memory.InGame && (currentPlayer = CurrentPlayer) is not null)
+                if (Memory.InGame && (currentPlayer = CurrentPlayer) is not null)
                 {
                     var render = GetRender(currentPlayer); // Construct next frame
                     mapCanvas.Image = render; // Render next frame
@@ -168,7 +166,7 @@ namespace eft_dma_radar
                         gr.DrawLine(grn, point1, point2);
                     }
                     // Draw Other Players
-                    var allPlayers = _memory.Players;
+                    var allPlayers = Memory.Players;
                     if (allPlayers is not null) foreach (KeyValuePair<string, Player> player in allPlayers) // Draw PMCs
                     {
                         lock (player.Value) // Obtain object lock
@@ -246,6 +244,15 @@ namespace eft_dma_radar
                 _currentMap = _allMaps[_mapIndex]; // Swap map
             }
             label_Map.Text = _currentMap.Name;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e) // Raised on Close()
+        {
+            try
+            {
+                Memory.Shutdown();
+            }
+            finally { base.OnFormClosing(e); }
         }
     }
 }

@@ -11,7 +11,6 @@ namespace eft_dma_radar
     /// </summary>
     public class Game
     {
-        private readonly Memory _mem;
         private GameObjectManager _gom;
         private ulong _localGameWorld;
         private RegisteredPlayers _rgtPlayers;
@@ -24,9 +23,8 @@ namespace eft_dma_radar
             }
         }
 
-        public Game(Memory mem)
+        public Game()
         {
-            _mem = mem;
         }
 
         /// <summary>
@@ -36,11 +34,11 @@ namespace eft_dma_radar
         {
             while (true)
             {
-                if (!_mem.Heartbeat()) throw new Exception("Game is not running!");
+                if (!Memory.Heartbeat()) throw new Exception("Game is not running!");
                 if (GetGOM() && GetLGW()) break;
                 else Thread.Sleep(1500);
             }
-            Console.WriteLine("Raid has started!");
+            Debug.WriteLine("Raid has started!");
             InGame = true;
         }
 
@@ -51,8 +49,8 @@ namespace eft_dma_radar
         {
             try
             {
-                var addr = _mem.ReadPtr(_mem.BaseModule + 0x17F8D28);
-                _gom = _mem.ReadStruct<GameObjectManager>(addr);
+                var addr = Memory.ReadPtr(Memory.BaseModule + 0x17F8D28);
+                _gom = Memory.ReadStruct<GameObjectManager>(addr);
                 Debug.WriteLine($"Found Game Object Manager at 0x{addr.ToString("X")}");
                 return true;
             }
@@ -68,8 +66,8 @@ namespace eft_dma_radar
         /// </summary>
         private ulong GetObjectFromList(ulong listPtr, ulong lastObjectPtr, string objectName)
         {
-            var activeObject = _mem.ReadStruct<BaseObject>(_mem.ReadPtr(listPtr));
-            var lastObject = _mem.ReadStruct<BaseObject>(_mem.ReadPtr(lastObjectPtr));
+            var activeObject = Memory.ReadStruct<BaseObject>(Memory.ReadPtr(listPtr));
+            var lastObject = Memory.ReadStruct<BaseObject>(Memory.ReadPtr(lastObjectPtr));
 
             if (activeObject.obj != 0x0)
             {
@@ -77,8 +75,8 @@ namespace eft_dma_radar
                 {
                     try
                     {
-                        var objectNamePtr = _mem.ReadPtr(activeObject.obj + 0x60);
-                        var objectNameStr = _mem.ReadString(objectNamePtr, 24);
+                        var objectNamePtr = Memory.ReadPtr(activeObject.obj + 0x60);
+                        var objectNameStr = Memory.ReadString(objectNamePtr, 24);
                         if (objectNameStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
                         {
                             Debug.WriteLine($"Found object {objectNameStr}");
@@ -90,7 +88,7 @@ namespace eft_dma_radar
                         Debug.WriteLine($"ERROR parsing object name, moving onto next: {ex}");
                     }
 
-                    activeObject = _mem.ReadStruct<BaseObject>(activeObject.nextObjectLink); // Read next object
+                    activeObject = Memory.ReadStruct<BaseObject>(activeObject.nextObjectLink); // Read next object
                 }
             }
             Debug.WriteLine($"Couldn't find object {objectName}");
@@ -105,12 +103,12 @@ namespace eft_dma_radar
             try
             {
                 var gameWorld = GetObjectFromList(
-                    _mem.ReadPtr(_gom.ActiveNodes),
-                    _mem.ReadPtr(_gom.LastActiveNode),
+                    Memory.ReadPtr(_gom.ActiveNodes),
+                    Memory.ReadPtr(_gom.LastActiveNode),
                     "GameWorld");
                 if (gameWorld == 0) throw new DMAException("Unable to find GameWorld Object, likely not in raid.");
-                _localGameWorld = _mem.ReadPtrChain(gameWorld, new uint[] { 0x30, 0x18, 0x28 }); // Game world >> Local Game World
-                var rgtPlayers = new RegisteredPlayers(_mem, _mem.ReadPtr(_localGameWorld + 0x80));
+                _localGameWorld = Memory.ReadPtrChain(gameWorld, new uint[] { 0x30, 0x18, 0x28 }); // Game world >> Local Game World
+                var rgtPlayers = new RegisteredPlayers(Memory.ReadPtr(_localGameWorld + 0x80));
                 if (rgtPlayers.PlayerCount > 1) // Make sure not in hideout,etc.
                 {
                     _rgtPlayers = rgtPlayers;
@@ -137,7 +135,7 @@ namespace eft_dma_radar
             int playerCount = _rgtPlayers.PlayerCount;
             if (playerCount < 1 || playerCount > 1024)
             {
-                Console.WriteLine("Raid has ended!");
+                Debug.WriteLine("Raid has ended!");
                 InGame = false;
                 return;
             }
