@@ -40,6 +40,7 @@ namespace eft_dma_radar
                 _worker = new Thread(() => Worker()) { IsBackground = true };
                 _worker.Start(); // Start new background thread to do memory operations on
                 _running = true;
+                Program.ShowWindow(Program.GetConsoleWindow(), 0); // Hide console if successful
             }
             catch (Exception ex)
             {
