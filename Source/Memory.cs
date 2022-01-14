@@ -3,25 +3,25 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using vmmsharp;
 
 namespace eft_dma_radar
 {
-    public class Memory : IDisposable
+    internal static class Memory
     {
-        private readonly Thread _worker;
-        private Game _game;
-        private uint _pid;
-        public ulong BaseModule { get; private set; }
-        public bool InGame
+        private static volatile bool _running = false;
+        private static readonly Thread _worker;
+        private static Game _game;
+        private static uint _pid;
+        public static ulong BaseModule { get; private set; }
+        public static bool InGame
         {
             get
             {
                 return _game?.InGame ?? false;
             }
         }
-        public ConcurrentDictionary<string, Player> Players
+        public static ConcurrentDictionary<string, Player> Players
         {
             get
             {
@@ -29,16 +29,26 @@ namespace eft_dma_radar
             }
         }
 
-        public Memory()
+        static Memory()
         {
-            Console.WriteLine("Loading memory module...");
-            vmm.Initialize("-printf", "-v", "-device", "FPGA"); // Initialize DMA device
-            Console.WriteLine("Starting Memory worker thread...");
-            _worker = new Thread(() => Worker()) { IsBackground = true };
-            _worker.Start(); // Start new background thread to do memory operations on
+            try
+            {
+                Debug.WriteLine("Loading memory module...");
+                if (!vmm.Initialize("-printf", "-v", "-device", "FPGA", "-memmap", "mmap.txt")) // Initialize DMA device
+                    throw new DMAException("ERROR initializing DMA Device! If you do not have a memory map (mmap.txt) edit line 37 in Memory.cs");
+                Debug.WriteLine("Starting Memory worker thread...");
+                _worker = new Thread(() => Worker()) { IsBackground = true };
+                _worker.Start(); // Start new background thread to do memory operations on
+                _running = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "DMA Init", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Environment.Exit(-1);
+            }
         }
 
-        private void Worker()
+        private static void Worker()
         {
             while (true)
             {
@@ -48,18 +58,18 @@ namespace eft_dma_radar
                     && GetModuleBase()
                     )
                     {
-                        Console.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
+                        Debug.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
                         break;
                     }
                     else
                     {
-                        Console.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
+                        Debug.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
                         Thread.Sleep(15000);
                     }
                 }
                 while (Heartbeat())
                 {
-                    _game = new Game(this);
+                    _game = new Game();
                     try
                     {
                         _game.WaitForGame();
@@ -73,15 +83,15 @@ namespace eft_dma_radar
                         Debug.WriteLine("Unhandled exception in Game Loop, restarting...");
                     }
                 }
-                Console.WriteLine("Escape From Tarkov is no longer running!");
+                Debug.WriteLine("Escape From Tarkov is no longer running!");
             }
         }
 
-        private bool GetPid()
+        private static bool GetPid()
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 vmm.PidGetFromName("EscapeFromTarkov.exe", out _pid);
                 if (_pid == 0) throw new DMAException("Unable to obtain PID. Game may not be running.");
                 else
@@ -97,11 +107,11 @@ namespace eft_dma_radar
             }
         }
 
-        private bool GetModuleBase()
+        private static bool GetModuleBase()
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 BaseModule = vmm.ProcessGetModuleBase(_pid, "UnityPlayer.dll");
                 if (BaseModule == 0) throw new DMAException("Unable to obtain Base Module Address. Game may not be running");
                 else
@@ -116,17 +126,13 @@ namespace eft_dma_radar
                 return false;
             }
         }
-
-
-
  
 
         /// <summary>
         /// Copy 'n' bytes to unmanaged memory. Caller is responsible for freeing memory.
         /// </summary>
-        public unsafe void ReadBuffer(ulong addr, IntPtr bufPtr, int size)
+        public static unsafe void ReadBuffer(ulong addr, IntPtr bufPtr, int size)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             Marshal.Copy(vmm.MemRead(_pid, addr, (uint)size, vmm.FLAG_NOCACHE)
                 , 0, bufPtr, size);
         }
@@ -134,9 +140,8 @@ namespace eft_dma_radar
         /// <summary>
         /// Read a chain of pointers.
         /// </summary>
-        public ulong ReadPtrChain(ulong ptr, uint[] offsets)
+        public static ulong ReadPtrChain(ulong ptr, uint[] offsets)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             ulong addr = 0;
             try { addr = ReadPtr(ptr + offsets[0]); }
             catch (Exception ex) { throw new DMAException($"ERROR reading pointer chain at index 0, addr 0x{ptr.ToString("X")} + 0x{offsets[0].ToString("X")}", ex); }
@@ -150,14 +155,14 @@ namespace eft_dma_radar
         /// <summary>
         /// Resolves a pointer and returns the memory address it points to.
         /// </summary>
-        public ulong ReadPtr(ulong ptr) => ReadUlong(ptr);
+        public static ulong ReadPtr(ulong ptr) => ReadUlong(ptr);
 
 
-        public ulong ReadUlong(ulong addr)
+        public static ulong ReadUlong(ulong addr)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToUInt64(vmm.MemRead(_pid, addr, 8, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -166,11 +171,11 @@ namespace eft_dma_radar
             }
         }
 
-        public long ReadLong(ulong addr) // read 8 bytes (int64)
+        public static long ReadLong(ulong addr) // read 8 bytes (int64)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToInt64(vmm.MemRead(_pid, addr, 8, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -178,11 +183,11 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading Int64 at 0x{addr.ToString("X")}", ex);
             }
         }
-        public int ReadInt(ulong addr) // read 4 bytes (int32)
+        public static int ReadInt(ulong addr) // read 4 bytes (int32)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToInt32(vmm.MemRead(_pid, addr, 4, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -190,11 +195,11 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading Int32 at 0x{addr.ToString("X")}", ex);
             }
         }
-        public uint ReadUint(ulong addr) // read 4 bytes (uint32)
+        public static uint ReadUint(ulong addr) // read 4 bytes (uint32)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToUInt32(vmm.MemRead(_pid, addr, 4, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -202,11 +207,11 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading Uint32 at 0x{addr.ToString("X")}", ex);
             }
         }
-        public float ReadFloat(ulong addr) // read 4 bytes (float)
+        public static float ReadFloat(ulong addr) // read 4 bytes (float)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToSingle(vmm.MemRead(_pid, addr, 4, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -214,11 +219,11 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading float at 0x{addr.ToString("X")}", ex);
             }
         }
-        public double ReadDouble(ulong addr) // read 8 bytes (double)
+        public static double ReadDouble(ulong addr) // read 8 bytes (double)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToDouble(vmm.MemRead(_pid, addr, 8, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -226,11 +231,11 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading double at 0x{addr.ToString("X")}", ex);
             }
         }
-        public bool ReadBool(ulong addr) // read 1 byte (bool)
+        public static bool ReadBool(ulong addr) // read 1 byte (bool)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return BitConverter.ToBoolean(vmm.MemRead(_pid, addr, 1, vmm.FLAG_NOCACHE), 0);
             }
             catch (Exception ex)
@@ -239,13 +244,13 @@ namespace eft_dma_radar
             }
         }
 
-        public T ReadStruct<T>(ulong addr) // Read structure from memory location
+        public static T ReadStruct<T>(ulong addr) // Read structure from memory location
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             int size = Marshal.SizeOf(typeof(T));
             var mem = Marshal.AllocHGlobal(size); // alloc mem
             try
             {
+                ThrowIfDMAShutdown();
                 Marshal.Copy(
                     vmm.MemRead(_pid, addr, (uint)size, vmm.FLAG_NOCACHE), 
                     0, mem, size); // Read to pointer location
@@ -264,11 +269,11 @@ namespace eft_dma_radar
         /// <summary>
         /// Read 'n' bytes at specified address and convert directly to a string.
         /// </summary>
-        public string ReadString(ulong addr, uint size) // read n bytes (string)
+        public static string ReadString(ulong addr, uint size) // read n bytes (string)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 return Encoding.Default.GetString(
                     vmm.MemRead(_pid, addr, size, vmm.FLAG_NOCACHE));
             }
@@ -281,11 +286,11 @@ namespace eft_dma_radar
         /// <summary>
         /// Read UnityEngineString structure
         /// </summary>
-        public string ReadUnityString(ulong addr)
+        public static string ReadUnityString(ulong addr)
         {
-            if (_disposed) throw new ObjectDisposedException("Memory Module has been disposed!");
             try
             {
+                ThrowIfDMAShutdown();
                 var length = (uint)ReadInt(addr + 0x10);
                 return Encoding.Unicode.GetString(
                     vmm.MemRead(_pid, addr + 0x14, length * 2, vmm.FLAG_NOCACHE));
@@ -299,32 +304,30 @@ namespace eft_dma_radar
         /// <summary>
         /// ToDo - Not sure if this is a good way to keep track if the process is still open
         /// </summary>
-        public bool Heartbeat() // Make sure game is still there
+        public static bool Heartbeat() // Make sure game is still there
         {
+            ThrowIfDMAShutdown();
             vmm.PidGetFromName("EscapeFromTarkov.exe", out uint pid);
             if (pid == 0) return false;
             else return true;
         }
 
-        // Public implementation of Dispose pattern callable by consumers.
-        private volatile bool _disposed = false;
         /// <summary>
-        /// Calls vmm.Close() and cleans up DMA Unmanaged Resources.
+        /// Close down DMA Device Connection.
         /// </summary>
-        public void Dispose() => Dispose(true);
-
-        protected virtual void Dispose(bool disposing)
+        public static void Shutdown()
         {
-            if (_disposed)
+            if (_running)
             {
-                return;
+                Debug.WriteLine("Closing down DMA Connection...");
+                _running = false;
+                vmm.Close();
             }
+        }
 
-            if (disposing)
-            {
-                _disposed = true;
-                vmm.Close(); // Cleanup vmmsharp resources
-            }
+        private static void ThrowIfDMAShutdown()
+        {
+            if (!_running) throw new DMAException("DMA Device is no longer initialized!");
         }
 
     }

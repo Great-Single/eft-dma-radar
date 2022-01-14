@@ -29,7 +29,7 @@ namespace eft_dma_radar
         {
             _sw.Stop();
             TimeSpan ts = _sw.Elapsed;
-            Console.WriteLine($"{_name} Stopwatch Runtime: {ts.Milliseconds}ms");
+            Debug.WriteLine($"{_name} Stopwatch Runtime: {ts.Milliseconds}ms");
         }
     }
 

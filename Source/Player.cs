@@ -10,11 +10,10 @@ namespace eft_dma_radar
     /// </summary>
     public class Player
     {
-        private static int _currentPlayerGroupID = 0; // ToDo
-        private readonly Memory _mem;
+        //private static string _currentPlayerGroupID = String.Empty;
         public readonly string Name;
         public readonly PlayerType Type;
-        public readonly int GroupID; // ToDo not working
+        //public readonly string GroupID; // ToDo not working
         private ulong _playerBase;
         private ulong _playerProfile;
         private ulong _playerInfo;
@@ -24,48 +23,49 @@ namespace eft_dma_radar
         private ulong _playerTransform;
         public int Health = -1;
         public bool IsAlive = true;
-        public bool HasExfild = false;
+        public bool IsActive = true;
         public Vector3 Position = new Vector3(0, 0, 0);
         public float Direction = 0f;
 
-        public Player(Memory mem, ulong playerBase, ulong playerProfile)
+        public Player(ulong playerBase, ulong playerProfile)
         {
             try
             {
-                _mem = mem;
                 _playerBase = playerBase;
                 _playerProfile = playerProfile;
-                _playerInfo = _mem.ReadPtr(playerProfile + 0x28);
-                _healthController = _mem.ReadPtrChain(_playerBase, new uint[] { 0x4F0, 0x50, 0x18 });
+                _playerInfo = Memory.ReadPtr(playerProfile + 0x28);
+                _healthController = Memory.ReadPtrChain(_playerBase, new uint[] { 0x4F0, 0x50, 0x18 });
                 _bodyParts = new ulong[7];
                 for (uint i = 0; i < 7; i++)
                 {
-                    _bodyParts[i] = _mem.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
+                    _bodyParts[i] = Memory.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
                 }
-                _movementContext = _mem.ReadPtr(_playerBase + 0x40);
-                _playerTransform = _mem.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 });
-                GroupID = _mem.ReadInt(_playerInfo + 0x18);
-                var playerNickname = _mem.ReadPtr(_playerInfo + 0x10);
-                Name = _mem.ReadUnityString(playerNickname);
-                var isLocalPlayer = _mem.ReadBool(_playerBase + 0x7FB);
+                _movementContext = Memory.ReadPtr(_playerBase + 0x40);
+                _playerTransform = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 });
+                //var grpPtr = Memory.ReadPtr(_playerInfo + 0x18);
+                //GroupID = Memory.ReadString(grpPtr, 8);
+                var namePtr = Memory.ReadPtr(_playerInfo + 0x10);
+                Name = Memory.ReadUnityString(namePtr);
+                var isLocalPlayer = Memory.ReadBool(_playerBase + 0x7FB);
                 if (isLocalPlayer)
                 {
                     Type = PlayerType.CurrentPlayer;
-                    _currentPlayerGroupID = GroupID;
+                    //_currentPlayerGroupID = GroupID;
                 }
+                //else if (GroupID == _currentPlayerGroupID) Type = PlayerType.Teammate;
                 else
                 {
-                    var playerSide = _mem.ReadInt(_playerInfo + 0x58); // Scav, PMC, etc.
+                    var playerSide = Memory.ReadInt(_playerInfo + 0x58); // Scav, PMC, etc.
                     if (playerSide == 0x4)
                     {
-                        var regDate = _mem.ReadInt(_playerInfo + 0x5C); // Bots wont have 'reg date'
+                        var regDate = Memory.ReadInt(_playerInfo + 0x5C); // Bots wont have 'reg date'
                         if (regDate == 0) Type = PlayerType.AIScav;
                         else Type = PlayerType.PlayerScav;
                     }
-                    //else if (GroupID == _currentPlayerGroupID) Type = PlayerType.Teammate;
                     else if (playerSide == 0x1 || playerSide == 0x2) Type = PlayerType.PMC;
                     else Type = PlayerType.Default;
                 }
+                Debug.WriteLine($"Player {Name} allocated.");
             }
             catch (Exception ex)
             {
@@ -83,7 +83,7 @@ namespace eft_dma_radar
             {
                 // ToDo - check player death
                 // ToDo - check player exfil
-                if (IsAlive && !HasExfild) // Only update if alive/in-raid
+                if (IsAlive && IsActive) // Only update if alive/in-raid
                 {
 
                     Position = GetPosition();
@@ -105,15 +105,19 @@ namespace eft_dma_radar
             float totalHealth = 0;
             for (uint i = 0; i < _bodyParts.Length; i++)
             {
-                var health = _mem.ReadFloat(_bodyParts[i] + 0x10);
+                var health = Memory.ReadFloat(_bodyParts[i] + 0x10);
                 totalHealth += health;
+                if (i == 0 || i == 1) // Head/thorax
+                {
+                    if (health == 0f) IsAlive = false;
+                }
             }
             return (int)Math.Round(totalHealth);
         }
 
         private float GetDirection()
         {
-            float deg = _mem.ReadFloat(_movementContext + 0x22C);
+            float deg = Memory.ReadFloat(_movementContext + 0x22C);
             if (deg < 0)
             {
                 return 360f + deg;
@@ -171,22 +175,22 @@ namespace eft_dma_radar
         /// </summary>
         private unsafe Tuple<ulong, ulong, int> GetPositionOffset(ulong transform)
         {
-            var transform_internal = _mem.ReadPtr(transform + 0x10);
+            var transform_internal = Memory.ReadPtr(transform + 0x10);
 
-            var pMatrix = _mem.ReadPtr(transform_internal + 0x38);
-            int index = _mem.ReadInt(transform_internal + 0x40);
+            var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
+            int index = Memory.ReadInt(transform_internal + 0x40);
 
-            var matrix_list_base = _mem.ReadPtr(pMatrix + 0x18);
+            var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
 
-            var dependency_index_table_base = _mem.ReadPtr(pMatrix + 0x20);
+            var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
 
             IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
             void* pMatricesBuf = pMatricesBufPtr.ToPointer();
-            _mem.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
+            Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
 
             IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
             void* pIndicesBuf = pIndicesBufPtr.ToPointer();
-            _mem.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
+            Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
 
             return Tuple.Create((UInt64)pMatricesBuf, (UInt64)pIndicesBuf, index);
         }
