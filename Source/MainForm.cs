@@ -135,8 +135,8 @@ namespace eft_dma_radar
             if (xPos < 0) xPos = 0;
             var yPos = currentPlayerPos.Y - zoom / 2;
             if (yPos < 0) yPos = 0;
-            if (xZoom > _currentMap.MapFile.Width) xZoom = _currentMap.MapFile.Width;
-            if (zoom > _currentMap.MapFile.Height) zoom = _currentMap.MapFile.Height;
+            if (xPos + xZoom > _currentMap.MapFile.Width) xZoom = _currentMap.MapFile.Width - xPos;
+            if (yPos + zoom > _currentMap.MapFile.Height) zoom = _currentMap.MapFile.Height - yPos;
             var bounds = new Rectangle(xPos, yPos, xZoom, zoom);
 
             var render = (Bitmap)_currentMap.MapFile.Clone(); // Get a fresh map to draw on
