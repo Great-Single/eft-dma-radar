@@ -38,7 +38,7 @@ namespace eft_dma_radar
                 if (GetGOM() && GetLGW()) break;
                 else Thread.Sleep(1500);
             }
-            Console.WriteLine("Raid has started!");
+            Debug.WriteLine("Raid has started!");
             InGame = true;
         }
 
@@ -135,7 +135,7 @@ namespace eft_dma_radar
             int playerCount = _rgtPlayers.PlayerCount;
             if (playerCount < 1 || playerCount > 1024)
             {
-                Console.WriteLine("Raid has ended!");
+                Debug.WriteLine("Raid has ended!");
                 InGame = false;
                 return;
             }

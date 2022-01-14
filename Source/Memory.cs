@@ -59,12 +59,12 @@ namespace eft_dma_radar
                     && GetModuleBase()
                     )
                     {
-                        Console.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
+                        Debug.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
                         break;
                     }
                     else
                     {
-                        Console.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
+                        Debug.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
                         Thread.Sleep(15000);
                     }
                 }
@@ -79,9 +79,9 @@ namespace eft_dma_radar
                             _game.GameLoop();
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Debug.WriteLine($"Unhandled exception in Game Loop, restarting: {ex}");
+                        Debug.WriteLine("Unhandled exception in Game Loop, restarting...");
                     }
                 }
                 Debug.WriteLine("Escape From Tarkov is no longer running!");
