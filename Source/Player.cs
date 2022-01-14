@@ -10,10 +10,10 @@ namespace eft_dma_radar
     /// </summary>
     public class Player
     {
-        private static int _currentPlayerGroupID = 0; // ToDo
+        //private static string _currentPlayerGroupID = String.Empty;
         public readonly string Name;
         public readonly PlayerType Type;
-        public readonly int GroupID; // ToDo not working
+        //public readonly string GroupID; // ToDo not working
         private ulong _playerBase;
         private ulong _playerProfile;
         private ulong _playerInfo;
@@ -23,7 +23,7 @@ namespace eft_dma_radar
         private ulong _playerTransform;
         public int Health = -1;
         public bool IsAlive = true;
-        public bool HasExfild = false;
+        public bool IsActive = true;
         public Vector3 Position = new Vector3(0, 0, 0);
         public float Direction = 0f;
 
@@ -42,15 +42,17 @@ namespace eft_dma_radar
                 }
                 _movementContext = Memory.ReadPtr(_playerBase + 0x40);
                 _playerTransform = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 });
-                GroupID = Memory.ReadInt(_playerInfo + 0x18);
-                var playerNickname = Memory.ReadPtr(_playerInfo + 0x10);
-                Name = Memory.ReadUnityString(playerNickname);
+                //var grpPtr = Memory.ReadPtr(_playerInfo + 0x18);
+                //GroupID = Memory.ReadString(grpPtr, 8);
+                var namePtr = Memory.ReadPtr(_playerInfo + 0x10);
+                Name = Memory.ReadUnityString(namePtr);
                 var isLocalPlayer = Memory.ReadBool(_playerBase + 0x7FB);
                 if (isLocalPlayer)
                 {
                     Type = PlayerType.CurrentPlayer;
-                    _currentPlayerGroupID = GroupID;
+                    //_currentPlayerGroupID = GroupID;
                 }
+                //else if (GroupID == _currentPlayerGroupID) Type = PlayerType.Teammate;
                 else
                 {
                     var playerSide = Memory.ReadInt(_playerInfo + 0x58); // Scav, PMC, etc.
@@ -60,10 +62,10 @@ namespace eft_dma_radar
                         if (regDate == 0) Type = PlayerType.AIScav;
                         else Type = PlayerType.PlayerScav;
                     }
-                    //else if (GroupID == _currentPlayerGroupID) Type = PlayerType.Teammate;
                     else if (playerSide == 0x1 || playerSide == 0x2) Type = PlayerType.PMC;
                     else Type = PlayerType.Default;
                 }
+                Debug.WriteLine($"Player {Name} allocated.");
             }
             catch (Exception ex)
             {
@@ -81,7 +83,7 @@ namespace eft_dma_radar
             {
                 // ToDo - check player death
                 // ToDo - check player exfil
-                if (IsAlive && !HasExfild) // Only update if alive/in-raid
+                if (IsAlive && IsActive) // Only update if alive/in-raid
                 {
 
                     Position = GetPosition();
@@ -105,6 +107,10 @@ namespace eft_dma_radar
             {
                 var health = Memory.ReadFloat(_bodyParts[i] + 0x10);
                 totalHealth += health;
+                if (i == 0 || i == 1) // Head/thorax
+                {
+                    if (health == 0f) IsAlive = false;
+                }
             }
             return (int)Math.Round(totalHealth);
         }

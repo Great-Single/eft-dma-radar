@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using vmmsharp;
 
 namespace eft_dma_radar
@@ -36,7 +35,7 @@ namespace eft_dma_radar
             {
                 Debug.WriteLine("Loading memory module...");
                 if (!vmm.Initialize("-printf", "-v", "-device", "FPGA", "-memmap", "mmap.txt")) // Initialize DMA device
-                    throw new DMAException("ERROR initializing DMA Device!");
+                    throw new DMAException("ERROR initializing DMA Device! If you do not have a memory map (mmap.txt) edit line 37 in Memory.cs");
                 Debug.WriteLine("Starting Memory worker thread...");
                 _worker = new Thread(() => Worker()) { IsBackground = true };
                 _worker.Start(); // Start new background thread to do memory operations on

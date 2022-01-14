@@ -8,7 +8,7 @@ namespace eft_dma_radar
     {
         private readonly ulong _base;
         private readonly ulong _listBase;
-        private readonly HashSet<uint> _registered;
+        private readonly HashSet<string> _registered;
         private readonly ConcurrentDictionary<string, Player> _players; // backing field
         public ConcurrentDictionary<string, Player> Players
         {
@@ -30,7 +30,7 @@ namespace eft_dma_radar
         {
             _base = baseAddr;
             _listBase = Memory.ReadPtr(_base + 0x0010);
-            _registered = new HashSet<uint>();
+            _registered = new HashSet<string>();
             _players = new ConcurrentDictionary<string, Player>();
         }
 
@@ -39,28 +39,42 @@ namespace eft_dma_radar
         /// </summary>
         public void UpdateList()
         {
+            _registered.Clear();
             int count = this.PlayerCount; // cache count
             for (uint i = 0; i < count; i++) // Add new players
             {
                 try
                 {
-                    if (_registered.Contains(i)) continue;
                     var playerBase = Memory.ReadPtr(_listBase + 0x20 + (i * 0x8));
                     var playerProfile = Memory.ReadPtr(playerBase + 0x4B8);
                     var playerId = Memory.ReadPtr(playerProfile + 0x10);
                     var playerIdString = Memory.ReadUnityString(playerId); // Player's Personal ID ToDo Testing
-                    var player = new Player(playerBase, playerProfile); // allocate player object
-                    if (_players.TryAdd(playerIdString, player)) // Add to collection
+                    if (!_players.ContainsKey(playerIdString))
                     {
-                        Debug.WriteLine($"Added new player from index {i + 1} of {count}" +
-                            $"\nBase: 0x{playerBase.ToString("X")}" +
-                            $"\nID: {playerIdString}");
-                        _registered.Add(i);
+                        var player = new Player(playerBase, playerProfile); // allocate player object
+                        _players.TryAdd(playerIdString, player);
                     }
+                    else
+                    {
+                        lock (_players[playerIdString])
+                        {
+                            _players[playerIdString].IsActive = true;
+                        }
+                    }
+                    _registered.Add(playerIdString);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"ERROR iterating registered player {i + 1} of {count}: {ex}");
+                }
+            }
+            var inactivePlayers = _players.Where(x => !_registered.Contains(x.Key));
+            foreach (KeyValuePair<string, Player> player in inactivePlayers)
+            {
+                lock (player.Value)
+                {
+                    player.Value.Update(); // update one last time
+                    player.Value.IsActive = false;
                 }
             }
         }

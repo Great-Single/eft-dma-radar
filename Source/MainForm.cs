@@ -187,6 +187,7 @@ namespace eft_dma_radar
                         lock (player.Value) // Obtain object lock
                         {
                             if (player.Value.Type is PlayerType.CurrentPlayer) continue; // Already drawn current player, move on
+                            if (player.Value.IsActive is false && player.Value.IsAlive is true) continue; // Skip exfil'd players
                             var playerPos = VectorToMapPos(player.Value.Position);
                             Pen pen;
                             var playerDirection = Deg2Rad(player.Value.Direction);
