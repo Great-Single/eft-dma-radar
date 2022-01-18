@@ -191,10 +191,7 @@ namespace eft_dma_radar
                     dwPageOffset = 0;
                     dwMemScatters++;
                 }
-                if (typeof(ulong) == typeof(ulong))
-                {
-                    results[i] = BitConverter.ToUInt64(buffer);
-                }
+                results[i] = BitConverter.ToUInt64(buffer);
             }
             return results;
         }
