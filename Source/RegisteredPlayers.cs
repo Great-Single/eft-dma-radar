@@ -39,43 +39,63 @@ namespace eft_dma_radar
         /// </summary>
         public void UpdateList()
         {
-            _registered.Clear();
-            int count = this.PlayerCount; // cache count
-            for (uint i = 0; i < count; i++) // Add new players
+            try
             {
-                try
+                _registered.Clear();
+                int count = this.PlayerCount; // cache count
+                ulong[] addr = new ulong[count];
+                for (uint i = 0; i < count; i++)
                 {
-                    var playerBase = Memory.ReadPtr(_listBase + 0x20 + (i * 0x8));
-                    var playerProfile = Memory.ReadPtr(playerBase + 0x4B8);
-                    var playerId = Memory.ReadPtr(playerProfile + 0x10);
-                    var playerIdString = Memory.ReadUnityString(playerId); // Player's Personal ID ToDo Testing
-                    if (!_players.ContainsKey(playerIdString))
-                    {
-                        var player = new Player(playerBase, playerProfile); // allocate player object
-                        _players.TryAdd(playerIdString, player);
-                    }
-                    else
-                    {
-                        lock (_players[playerIdString])
-                        {
-                            _players[playerIdString].IsActive = true;
-                        }
-                    }
-                    _registered.Add(playerIdString);
+                    addr[i] = _listBase + 0x20 + (i * 0x8);
                 }
-                catch (Exception ex)
+                var playerBase = Memory.ReadScatter(addr);
+                for (uint i = 0; i < count; i++)
                 {
-                    Debug.WriteLine($"ERROR iterating registered player {i + 1} of {count}: {ex}");
+                    addr[i] = playerBase[i] + 0x4B8;
+                }
+                var playerProfile = Memory.ReadScatter(addr);
+                for (uint i = 0; i < count; i++)
+                {
+                    addr[i] = playerProfile[i] + 0x10;
+                }
+                var playerId = Memory.ReadScatter(addr);
+                for (uint i = 0; i < count; i++)
+                {
+                    try
+                    {
+                        var playerIdString = Memory.ReadUnityString(playerId[i]); // Player's Personal ID ToDo Testing
+                        if (!_players.ContainsKey(playerIdString))
+                        {
+                            var player = new Player(playerBase[i], playerProfile[i]); // allocate player object
+                            _players.TryAdd(playerIdString, player);
+                        }
+                        else
+                        {
+                            lock (_players[playerIdString])
+                            {
+                                _players[playerIdString].IsActive = true;
+                            }
+                        }
+                        _registered.Add(playerIdString);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"ERROR iterating registered player {i + 1} of {count}: {ex}");
+                    }
+                }
+                var inactivePlayers = _players.Where(x => !_registered.Contains(x.Key));
+                foreach (KeyValuePair<string, Player> player in inactivePlayers)
+                {
+                    lock (player.Value)
+                    {
+                        player.Value.Update(); // update one last time
+                        player.Value.IsActive = false;
+                    }
                 }
             }
-            var inactivePlayers = _players.Where(x => !_registered.Contains(x.Key));
-            foreach (KeyValuePair<string, Player> player in inactivePlayers)
+            catch (Exception ex)
             {
-                lock (player.Value)
-                {
-                    player.Value.Update(); // update one last time
-                    player.Value.IsActive = false;
-                }
+                Debug.WriteLine($"ERROR iterating registered players: {ex}");
             }
         }
 

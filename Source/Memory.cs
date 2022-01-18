@@ -35,7 +35,7 @@ namespace eft_dma_radar
             {
                 Debug.WriteLine("Loading memory module...");
                 if (!vmm.Initialize("-printf", "-v", "-device", "FPGA", "-memmap", "mmap.txt")) // Initialize DMA device
-                    throw new DMAException("ERROR initializing DMA Device! If you do not have a memory map (mmap.txt) edit line 37 in Memory.cs");
+                    throw new DMAException("ERROR initializing DMA Device! If you do not have a memory map (mmap.txt) edit line 37 in Memory.cs");                
                 Debug.WriteLine("Starting Memory worker thread...");
                 _worker = new Thread(() => Worker()) { IsBackground = true };
                 _worker.Start(); // Start new background thread to do memory operations on
@@ -132,7 +132,78 @@ namespace eft_dma_radar
                 return false;
             }
         }
- 
+
+        public static ulong[] ReadScatter(ulong[] addr)
+        {
+            uint dwMemScatters = 0;
+            List<ulong> toScatter = new List<ulong>();
+            for (int i = 0; i < addr.Length; i++)
+            {
+                ulong dwAddress = addr[i];
+                uint size = (uint)Marshal.SizeOf(typeof(ulong));
+
+                //get the number of pages
+                uint dwNumPages = GetNumberOfPages(dwAddress, size);
+
+                //loop all the pages we would need
+                for (int p = 0; p < dwNumPages; p++)
+                {
+                    toScatter.Add(PageAlign(dwAddress));
+                    dwMemScatters++;
+                }
+            }
+            var scatters = vmm.MemReadScatter(_pid, vmm.FLAG_NOCACHE, toScatter.ToArray());
+            uint dwProcessedCount = (uint)scatters.Length;
+
+            ulong[] results = new ulong[addr.Length];
+            dwMemScatters = 0;
+            for (int i = 0; i < addr.Length; i++)
+            {
+                ulong dwAdd = addr[i];
+
+                uint dwPageOffset = PAGE_OFFSET(dwAdd);
+
+                uint size = (uint)Marshal.SizeOf(typeof(ulong));
+                byte[] buffer = new byte[size];
+                int bufferOffset = 0;
+                uint cb = Math.Min(size, (uint)Environment.SystemPageSize - dwPageOffset);
+
+                uint dwNumPages = GetNumberOfPages(dwAdd, size);
+
+                for (int p = 0; p < dwNumPages; p++)
+                {
+                    if (scatters[dwMemScatters].f)
+                    {
+                        Buffer.BlockCopy(scatters[dwMemScatters].pb, (int)dwPageOffset, buffer, bufferOffset, (int)cb);
+                        bufferOffset += (int)cb;
+                    }
+                    else
+                        for (int p2 = 0; p2 < cb; p2++)
+                        {
+                            Buffer.BlockCopy(new byte[] { 0 }, 0, buffer, bufferOffset, 1);
+                            bufferOffset++;
+                        }
+
+                    cb = (uint)Environment.SystemPageSize;
+                    if (((dwPageOffset + size) & 0xfff) != 0)
+                        cb = ((dwPageOffset + size) & 0xfff);
+
+                    dwPageOffset = 0;
+                    dwMemScatters++;
+                }
+                if (typeof(ulong) == typeof(ulong))
+                {
+                    results[i] = BitConverter.ToUInt64(buffer);
+                }
+            }
+            return results;
+        }
+
+        private static uint PAGE_OFFSET(ulong addr)
+        {
+            return (uint)(addr - PageAlign(addr));
+        }
+
 
         /// <summary>
         /// Copy 'n' bytes to unmanaged memory. Caller is responsible for freeing memory.
@@ -337,6 +408,11 @@ namespace eft_dma_radar
             if (!_running) throw new DMAShutdown("DMA Device is no longer initialized!");
         }
 
+        // Helper DLL to perform memory alignment macros
+        [DllImport("memalign.dll")]
+        private static extern ulong PageAlign(ulong addr);
+        [DllImport("memalign.dll")]
+        private static extern uint GetNumberOfPages(ulong addr, uint size);
     }
 
     public class DMAException : Exception
