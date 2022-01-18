@@ -69,7 +69,7 @@ namespace eft_dma_radar
         /// </summary>
         public Point GetNamePoint()
         {
-            return new Point(X + 8, Y - 8);
+            return new Point(X + 13, Y - 13);
         }
     }
 
