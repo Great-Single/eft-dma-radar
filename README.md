@@ -20,7 +20,8 @@ Customs.JSON
 	"x": 1292.0,
 	"y": 996.0,
 	"z": 0.0,
-	"scale": 3.75
+	"scale": 3.75,
+	"maxZoom": 4000
 }
 ```
 
