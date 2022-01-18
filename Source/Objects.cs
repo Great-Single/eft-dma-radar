@@ -114,6 +114,47 @@ namespace eft_dma_radar
         }
     }
 
+    public class Config
+    {
+        [JsonPropertyName("playerAimLine")]
+        public int PlayerAimLineLength { get; set; }
+        [JsonPropertyName("enemyAimLine")]
+        public int EnemyAimLineLength { get; set; }
+        [JsonPropertyName("defaultZoom")]
+        public int DefaultZoom { get; set; }
+        [JsonPropertyName("lootEnabled")]
+        public bool LootEnabled { get; set; }
+
+        public Config()
+        {
+            PlayerAimLineLength = 100;
+            EnemyAimLineLength = 100;
+            DefaultZoom = 100;
+            LootEnabled = true;
+        }
+
+        public static bool TryLoadConfig(out Config config)
+        {
+            try
+            {
+                if (!File.Exists("Config.json")) throw new FileNotFoundException("Config.json does not exist!");
+                var json = File.ReadAllText("Config.json");
+                config = JsonSerializer.Deserialize<Config>(json);
+                return true;
+            }
+            catch
+            {
+                config = null;
+                return false;
+            }
+        }
+        public static void SaveConfig(Config config)
+        {
+            var json = JsonSerializer.Serialize<Config>(config);
+            File.WriteAllText("Config.json", json);
+        }
+    }
+
     // EFT/Unity Structures (WIP)
 
     public struct GameObjectManager

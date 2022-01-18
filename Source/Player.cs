@@ -14,13 +14,13 @@ namespace eft_dma_radar
         public readonly string Name;
         public readonly PlayerType Type;
         //public readonly string GroupID; // ToDo not working
-        private ulong _playerBase;
-        private ulong _playerProfile;
-        private ulong _playerInfo;
-        private ulong _healthController;
-        private ulong[] _bodyParts;
-        private ulong _movementContext;
-        private ulong _playerTransform;
+        private readonly ulong _playerBase;
+        private readonly ulong _playerProfile;
+        private readonly ulong _playerInfo;
+        private readonly ulong _healthController;
+        private readonly ulong[] _bodyParts;
+        private readonly ulong _movementContext;
+        private readonly ulong _playerTransform;
         public int Health = -1;
         public bool IsAlive = true;
         public bool IsActive = true;
@@ -81,8 +81,6 @@ namespace eft_dma_radar
         {
             try
             {
-                // ToDo - check player death
-                // ToDo - check player exfil
                 if (IsAlive && IsActive) // Only update if alive/in-raid
                 {
 

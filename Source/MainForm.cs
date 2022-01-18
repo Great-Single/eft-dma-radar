@@ -20,6 +20,7 @@ namespace eft_dma_radar
     {
         private readonly object _renderLock = new object();
         private readonly List<Map> _allMaps; // Contains all maps from \\Maps folder
+        private readonly Config _config;
         private int _mapIndex = 0;
         private Map _currentMap; // Current Selected Map
         private Bitmap _currentRender; // Currently rendered frame
@@ -85,6 +86,8 @@ namespace eft_dma_radar
         public MainForm()
         {
             InitializeComponent();
+            if (Config.TryLoadConfig(out _config) is not true) _config = new Config();
+            LoadConfig();
             _allMaps = new List<Map>();
             LoadMaps();
             this.DoubleBuffered = true; // Prevent flickering
@@ -102,16 +105,23 @@ namespace eft_dma_radar
         }
 
         /// <summary>
+        /// Load previously set GUI Configuraiton values.
+        /// </summary>
+        private void LoadConfig()
+        {
+            trackBar_AimLength.Value = _config.PlayerAimLineLength;
+            trackBar_EnemyAim.Value = _config.EnemyAimLineLength;
+            checkBox_Loot.Checked = _config.LootEnabled;
+            trackBar_Zoom.Value = _config.DefaultZoom;
+        }
+
+        /// <summary>
         /// Load map files (.PNG) and Configs (.JSON) from \\Maps folder.
         /// </summary>
         private void LoadMaps()
         {
             var dir = new DirectoryInfo($"{Environment.CurrentDirectory}\\Maps");
-            if (!dir.Exists)
-            {
-                dir.Create();
-                throw new IOException("Unable to locate Maps folder!");
-            }
+            if (!dir.Exists) dir.Create();
             var maps = dir.GetFiles("*.png"); // Get all PNG Files
             if (maps.Length == 0) throw new IOException("Maps folder is empty!");
             foreach (var map in maps)
@@ -179,7 +189,7 @@ namespace eft_dma_radar
             if (yPos + zoom > _currentMap.MapFile.Height) zoom = _currentMap.MapFile.Height - yPos;
             _bounds = new Rectangle(xPos, yPos, xZoom, zoom);
 
-            var render = ZoomImage((Bitmap)_currentMap.MapFile.Clone(), _bounds); // Get a zoomed section to draw on
+            var render = ZoomImage(_currentMap.MapFile, _bounds); // Get a zoomed section to draw on
 
             using (var gr = Graphics.FromImage(render)) // Get fresh frame
             {
@@ -246,7 +256,7 @@ namespace eft_dma_radar
                 Bitmap cropped = source.Clone(bounds, source.PixelFormat);
                 return cropped;
             }
-            catch (OutOfMemoryException) { return null; }
+            catch (OutOfMemoryException) { return null; } // Occurs if bounds go over the edge of the bitmap (shouldn't happen)
         }
 
         /// <summary>
@@ -321,6 +331,11 @@ namespace eft_dma_radar
         {
             try
             {
+                _config.PlayerAimLineLength = trackBar_AimLength.Value;
+                _config.EnemyAimLineLength = trackBar_EnemyAim.Value;
+                _config.LootEnabled = checkBox_Loot.Checked;
+                _config.DefaultZoom = trackBar_Zoom.Value;
+                Config.SaveConfig(_config);
                 Memory.Shutdown();
             }
             finally { base.OnFormClosing(e); }
