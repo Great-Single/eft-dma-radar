@@ -249,6 +249,9 @@ namespace eft_dma_radar
             catch (OutOfMemoryException) { return null; }
         }
 
+        /// <summary>
+        /// Checks if provided location is within current zoomed map bounds, and provides coordinate offsets.
+        /// </summary>
         private bool IsInZoomedBounds(MapPosition location, out MapPosition offsetLocation)
         {
             if (location.X >= _bounds.Left && location.X <= _bounds.Right 
@@ -294,6 +297,9 @@ namespace eft_dma_radar
             };
         }
 
+        /// <summary>
+        /// Toggles currently selected map.
+        /// </summary>
         private void ToggleMap()
         {
             if (_mapIndex == _allMaps.Count - 1) _mapIndex = 0; // Start over when end of maps reached
@@ -334,12 +340,12 @@ namespace eft_dma_radar
             }
             else if (keyData == (Keys.F3))
             {
-                ToggleMap();
+                this.checkBox_Loot.Checked = !this.checkBox_Loot.Checked; // Toggle loot
                 return true;
             }
             else if (keyData == (Keys.F4))
             {
-                this.checkBox_Loot.Checked = !this.checkBox_Loot.Checked; // Toggle loot
+                ToggleMap();
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
