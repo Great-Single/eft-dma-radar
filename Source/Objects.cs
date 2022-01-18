@@ -54,22 +54,22 @@ namespace eft_dma_radar
     {
         public int X;
         public int Y;
-        public int Height; // Z
+        public float Height; // Z
 
         /// <summary>
         /// Get exact player location.
         /// </summary>
-        public Point GetPlayerCirclePoint(int offset)
+        public Point GetPlayerCirclePoint()
         {
-            return new Point(X - offset, Y - offset);
+            return new Point(X - 12, Y - 12);
         }
 
         /// <summary>
         /// Gets Point where player name should be drawn.
         /// </summary>
-        public Point GetNamePoint(int offset)
+        public Point GetNamePoint()
         {
-            return new Point(X + offset, Y - offset);
+            return new Point(X + 8, Y - 8);
         }
     }
 
@@ -103,6 +103,8 @@ namespace eft_dma_radar
         public float Z { get; set; }
         [JsonPropertyName("scale")]
         public float Scale { get; set; }
+        [JsonPropertyName("maxZoom")]
+        public int MaxZoom { get; set; }
 
 
         public static MapConfig LoadFromFile(string file)

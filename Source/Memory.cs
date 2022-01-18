@@ -132,8 +132,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Copy 'n' bytes to unmanaged memory. Caller is responsible for freeing memory.
         /// </summary>
-        public static unsafe void ReadBuffer(ulong addr, IntPtr bufPtr, int size)
+        public static void ReadBuffer(ulong addr, IntPtr bufPtr, int size)
         {
+            ThrowIfDMAShutdown();
             Marshal.Copy(vmm.MemRead(_pid, addr, (uint)size, vmm.FLAG_NOCACHE)
                 , 0, bufPtr, size);
         }

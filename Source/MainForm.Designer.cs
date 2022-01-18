@@ -42,6 +42,7 @@
             this.trackBar_AimLength = new System.Windows.Forms.TrackBar();
             this.label_Map = new System.Windows.Forms.Label();
             this.button_Map = new System.Windows.Forms.Button();
+            this.checkBox_Loot = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.mapCanvas)).BeginInit();
@@ -109,6 +110,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.checkBox_Loot);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.trackBar_Zoom);
             this.groupBox1.Controls.Add(this.label3);
@@ -200,7 +202,7 @@
             // label_Map
             // 
             this.label_Map.AutoSize = true;
-            this.label_Map.Location = new System.Drawing.Point(42, 63);
+            this.label_Map.Location = new System.Drawing.Point(54, 63);
             this.label_Map.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label_Map.Name = "label_Map";
             this.label_Map.Size = new System.Drawing.Size(79, 15);
@@ -212,11 +214,22 @@
             this.button_Map.Location = new System.Drawing.Point(44, 33);
             this.button_Map.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.button_Map.Name = "button_Map";
-            this.button_Map.Size = new System.Drawing.Size(88, 27);
+            this.button_Map.Size = new System.Drawing.Size(107, 27);
             this.button_Map.TabIndex = 7;
-            this.button_Map.Text = "Map";
+            this.button_Map.Text = "Toggle Map (F4)";
             this.button_Map.UseVisualStyleBackColor = true;
             this.button_Map.Click += new System.EventHandler(this.button_Map_Click);
+            // 
+            // checkBox_Loot
+            // 
+            this.checkBox_Loot.AutoSize = true;
+            this.checkBox_Loot.Location = new System.Drawing.Point(38, 107);
+            this.checkBox_Loot.Name = "checkBox_Loot";
+            this.checkBox_Loot.Size = new System.Drawing.Size(105, 19);
+            this.checkBox_Loot.TabIndex = 17;
+            this.checkBox_Loot.Text = "Show Loot (F3)";
+            this.checkBox_Loot.UseVisualStyleBackColor = true;
+            this.checkBox_Loot.CheckedChanged += new System.EventHandler(this.checkBox_Loot_CheckedChanged);
             // 
             // MainForm
             // 
@@ -257,6 +270,7 @@
         private Label label_Pos;
         private Label label1;
         private TrackBar trackBar_Zoom;
+        private CheckBox checkBox_Loot;
     }
 }
 

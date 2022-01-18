@@ -109,7 +109,11 @@ namespace eft_dma_radar
                 totalHealth += health;
                 if (i == 0 || i == 1) // Head/thorax
                 {
-                    if (health == 0f) IsAlive = false;
+                    if (health == 0f)
+                    {
+                        IsAlive = false;
+                        break;
+                    }
                 }
             }
             return (int)Math.Round(totalHealth);
@@ -130,14 +134,23 @@ namespace eft_dma_radar
         /// </summary>
         private unsafe Vector3 GetPosition()
         {
-            ulong pMatricesBuf = 0;
-            ulong pIndicesBuf = 0;
-            int index = 0;
+            var transform_internal = Memory.ReadPtr(_playerTransform + 0x10);
 
-            var offsets = GetPositionOffset(_playerTransform);
-            pMatricesBuf = offsets.Item1;
-            pIndicesBuf = offsets.Item2;
-            index = offsets.Item3;
+            var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
+            int index = Memory.ReadInt(transform_internal + 0x40);
+
+            var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
+
+            var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
+
+            IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
+            void* pMatricesBuf = pMatricesBufPtr.ToPointer();
+            Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
+
+            IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
+            void* pIndicesBuf = pIndicesBufPtr.ToPointer();
+            Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
+
 
             Vector4 result = *(Vector4*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index);
             int index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index);
@@ -164,35 +177,10 @@ namespace eft_dma_radar
             }
 
             // Free mem
-            Recycler.Pointers.Add(new IntPtr((long)pMatricesBuf));
-            Recycler.Pointers.Add(new IntPtr((long)pIndicesBuf));
+            Recycler.Pointers.Add(pMatricesBufPtr);
+            Recycler.Pointers.Add(pIndicesBufPtr);
 
             return new Vector3(result.X, result.Z, result.Y);
-        }
-
-        /// <summary>
-        /// Helper method for GetPosition()
-        /// </summary>
-        private unsafe Tuple<ulong, ulong, int> GetPositionOffset(ulong transform)
-        {
-            var transform_internal = Memory.ReadPtr(transform + 0x10);
-
-            var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
-            int index = Memory.ReadInt(transform_internal + 0x40);
-
-            var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
-
-            var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
-
-            IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
-            void* pMatricesBuf = pMatricesBufPtr.ToPointer();
-            Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
-
-            IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
-            void* pIndicesBuf = pIndicesBufPtr.ToPointer();
-            Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
-
-            return Tuple.Create((UInt64)pMatricesBuf, (UInt64)pIndicesBuf, index);
         }
 
         private static unsafe Vector4 Shuffle(Vector4 v1, ShuffleSel sel)
