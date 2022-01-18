@@ -51,41 +51,44 @@ namespace eft_dma_radar
 
         private static void Worker()
         {
-            while (true)
+            try
             {
-                while (true) // Startup loop
+                while (true)
                 {
-                    if (GetPid()
-                    && GetModuleBase()
-                    )
+                    while (true) // Startup loop
                     {
-                        Debug.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
-                        break;
-                    }
-                    else
-                    {
-                        Debug.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
-                        Thread.Sleep(15000);
-                    }
-                }
-                while (Heartbeat())
-                {
-                    _game = new Game();
-                    try
-                    {
-                        _game.WaitForGame();
-                        while (_game.InGame)
+                        if (GetPid()
+                        && GetModuleBase()
+                        )
                         {
-                            _game.GameLoop();
+                            Debug.WriteLine($"EFT is running at PID {_pid}, and found module base entry for UnityPlayer.dll at {BaseModule.ToString("X")}");
+                            break;
+                        }
+                        else
+                        {
+                            Debug.WriteLine("Unable to find EFT process, trying again in 15 seconds...");
+                            Thread.Sleep(15000);
                         }
                     }
-                    catch
+                    while (Heartbeat())
                     {
-                        Debug.WriteLine("Unhandled exception in Game Loop, restarting...");
+                        _game = new Game();
+                        try
+                        {
+                            _game.WaitForGame();
+                            while (_game.InGame)
+                            {
+                                _game.GameLoop();
+                            }
+                        }
+                        catch
+                        {
+                            Debug.WriteLine("Unhandled exception in Game Loop, restarting...");
+                        }
                     }
+                    Debug.WriteLine("Escape From Tarkov is no longer running!");
                 }
-                Debug.WriteLine("Escape From Tarkov is no longer running!");
-            }
+            } catch (DMAShutdown) { return; } // Shutdown Thread Gracefully
         }
 
         private static bool GetPid()
@@ -101,6 +104,7 @@ namespace eft_dma_radar
                     return true;
                 }
             }
+            catch (DMAShutdown) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"ERROR getting PID: {ex}");
@@ -121,6 +125,7 @@ namespace eft_dma_radar
                     return true;
                 }
             }
+            catch (DMAShutdown) { throw; }
             catch (Exception ex)
             {
                 Debug.WriteLine($"ERROR getting module base: {ex}");
@@ -329,7 +334,7 @@ namespace eft_dma_radar
 
         private static void ThrowIfDMAShutdown()
         {
-            if (!_running) throw new DMAException("DMA Device is no longer initialized!");
+            if (!_running) throw new DMAShutdown("DMA Device is no longer initialized!");
         }
 
     }
@@ -346,6 +351,23 @@ namespace eft_dma_radar
         }
 
         public DMAException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+    }
+
+    public class DMAShutdown : Exception
+    {
+        public DMAShutdown()
+        {
+        }
+
+        public DMAShutdown(string message)
+            : base(message)
+        {
+        }
+
+        public DMAShutdown(string message, Exception inner)
             : base(message, inner)
         {
         }
