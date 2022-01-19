@@ -103,8 +103,6 @@ namespace eft_dma_radar
         public float Z { get; set; }
         [JsonPropertyName("scale")]
         public float Scale { get; set; }
-        [JsonPropertyName("maxZoom")]
-        public int MaxZoom { get; set; }
 
 
         public static MapConfig LoadFromFile(string file)
@@ -172,6 +170,12 @@ namespace eft_dma_radar
         /// Defines the size for reference types (Unity String/IntPtr). Value type sizes are derived from the 'Type', and this can be left empty.
         /// </summary>
         public int size { get; init; }
+    }
+
+    public struct ZoomLevel
+    {
+        public readonly int Width { get; init; }
+        public readonly int Height { get; init; }
     }
 
     // EFT/Unity Structures (WIP)

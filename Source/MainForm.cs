@@ -24,7 +24,6 @@ namespace eft_dma_radar
         private int _mapIndex = 0;
         private Map _currentMap; // Current Selected Map
         private Bitmap _currentRender; // Currently rendered frame
-        private Rectangle _bounds;
         private const int _strokeWidth = 6;
         private Player CurrentPlayer
         {
@@ -166,10 +165,12 @@ namespace eft_dma_radar
         /// </summary>
         private Bitmap GetRender(Player currentPlayer)
         {
-            int zoom = (int)Math.Round(_currentMap.ConfigFile.MaxZoom * (.01f * trackBar_Zoom.Value)); // Get zoom level
-            double aspect = (double)mapCanvas.Width / (double)mapCanvas.Height; // Get aspect ratio of drawing canvas (ex. 16:9)
+            var zoom = new ZoomLevel()
+            {
+                Width = (int)Math.Round(_currentMap.MapFile.Width * (.01f * trackBar_Zoom.Value)),
+                Height = (int)Math.Round(_currentMap.MapFile.Height * (.01f * trackBar_Zoom.Value))
+            };
 
-            MapPosition currentPlayerPos;
             Vector3 currentPlayerRawPos;
             double currentPlayerDirection;
             lock (currentPlayer) // Obtain object lock
@@ -178,24 +179,16 @@ namespace eft_dma_radar
                 currentPlayerDirection = Deg2Rad(currentPlayer.Direction);
                 label_Pos.Text = $"X: {currentPlayer.Position.X}\r\nY: {currentPlayer.Position.Y}\r\nZ: {currentPlayer.Position.Z}";
             }
-            currentPlayerPos = VectorToMapPos(currentPlayerRawPos);
-            // Get map frame bounds (Based on Zoom Level, centered on Current Player)
-            var xZoom = (int)Math.Round(zoom * aspect);
-            var xPos = currentPlayerPos.X - xZoom / 2;
-            if (xPos < 0) xPos = 0;
-            var yPos = currentPlayerPos.Y - zoom / 2;
-            if (yPos < 0) yPos = 0;
-            if (xPos + xZoom > _currentMap.MapFile.Width) xZoom = _currentMap.MapFile.Width - xPos;
-            if (yPos + zoom > _currentMap.MapFile.Height) zoom = _currentMap.MapFile.Height - yPos;
-            _bounds = new Rectangle(xPos, yPos, xZoom, zoom);
+            MapPosition currentPlayerPos = VectorToMapPos(currentPlayerRawPos);
 
-            var render = ZoomImage(_currentMap.MapFile, _bounds); // Get a zoomed section to draw on
+            var bounds = CenterOnPlayer(zoom, currentPlayerPos);
+            var render = ZoomImage(_currentMap.MapFile, bounds); // Get a zoomed section to draw on
 
             using (var gr = Graphics.FromImage(render)) // Get fresh frame
             {
                 // Draw Current Player
                 {
-                    IsInZoomedBounds(currentPlayerPos, out var zoomedCurrentPlayerPos);
+                    IsInZoomedBounds(currentPlayerPos, bounds, out var zoomedCurrentPlayerPos);
                     gr.DrawEllipse(_greenPen, new Rectangle(zoomedCurrentPlayerPos.GetPlayerCirclePoint(), new Size(24, 24)));
                     Point point1 = new Point(zoomedCurrentPlayerPos.X, zoomedCurrentPlayerPos.Y);
                     Point point2 = new Point((int)(zoomedCurrentPlayerPos.X + Math.Cos(currentPlayerDirection) * trackBar_AimLength.Value), (int)(zoomedCurrentPlayerPos.Y + Math.Sin(currentPlayerDirection) * trackBar_AimLength.Value));
@@ -210,7 +203,7 @@ namespace eft_dma_radar
                         if (player.Value.Type is PlayerType.CurrentPlayer) continue; // Already drawn current player, move on
                         if (!player.Value.IsActive && player.Value.IsAlive) continue; // Skip exfil'd players
                         var playerPos = VectorToMapPos(player.Value.Position);
-                        if (!IsInZoomedBounds(playerPos, out var zoomedPlayerPos)) continue;
+                        if (!IsInZoomedBounds(playerPos, bounds, out var zoomedPlayerPos)) continue;
                         Pen pen;
                         var playerDirection = Deg2Rad(player.Value.Direction);
                         var aimLength = trackBar_EnemyAim.Value;
@@ -260,17 +253,37 @@ namespace eft_dma_radar
         }
 
         /// <summary>
+        /// Provides zoomed map bounds (centers on player).
+        /// </summary>
+        private Rectangle CenterOnPlayer(ZoomLevel zoom, MapPosition pos)
+        {
+            int mapWidth = _currentMap.MapFile.Width;
+            int mapHeight = _currentMap.MapFile.Height;
+            int x = 0; int y = 0;
+            if (pos.X - zoom.Width / 2 > 0) x = pos.X - zoom.Width / 2;
+            if (pos.Y - zoom.Height / 2 > 0) y = pos.Y - zoom.Height / 2;
+            while ((x + zoom.Width) > mapWidth) x--;
+            while ((y + zoom.Height) > mapHeight) y--;
+            var orig = new Rectangle(x, y, mapWidth, mapHeight);
+            var zoomed = new Rectangle(pos.X - zoom.Width / 2, pos.Y - zoom.Height / 2, zoom.Width, zoom.Height);
+            var newPoint = new Point(Math.Max(Math.Min(zoomed.X, orig.X - zoomed.Width), orig.X),
+            Math.Max(Math.Min(zoomed.Y, orig.Y - zoomed.Height), orig.Y));
+            zoomed.Location = newPoint;
+            return zoomed;
+        }
+
+        /// <summary>
         /// Checks if provided location is within current zoomed map bounds, and provides coordinate offsets.
         /// </summary>
-        private bool IsInZoomedBounds(MapPosition location, out MapPosition offsetLocation)
+        private bool IsInZoomedBounds(MapPosition location, Rectangle bounds, out MapPosition offsetLocation)
         {
-            if (location.X >= _bounds.Left && location.X <= _bounds.Right 
-                && location.Y >= _bounds.Top && location.Y <= _bounds.Bottom)
+            if (location.X >= bounds.Left && location.X <= bounds.Right 
+                && location.Y >= bounds.Top && location.Y <= bounds.Bottom)
             {
                 offsetLocation = new MapPosition()
                 {
-                    X = location.X - _bounds.Left,
-                    Y = location.Y - _bounds.Top,
+                    X = location.X - bounds.Left,
+                    Y = location.Y - bounds.Top,
                     Height = location.Height
                 };
                 return true;
