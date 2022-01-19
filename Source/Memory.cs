@@ -139,6 +139,7 @@ namespace eft_dma_radar
         // Credit to asmfreak https://www.unknowncheats.me/forum/3345474-post27.html
         public static object[] ReadScatter(ulong[] addr, Type[] types)
         {
+            ThrowIfDMAShutdown();
             uint dwMemScatters = 0;
             List<ulong> toScatter = new List<ulong>();
             for (int i = 0; i < addr.Length; i++)
