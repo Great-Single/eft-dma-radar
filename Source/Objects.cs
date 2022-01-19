@@ -155,6 +155,16 @@ namespace eft_dma_radar
         }
     }
 
+    public struct ScatterReadEntry
+    {
+        public ulong addr { get; init; }
+        public Type type { get; init; }
+        /// <summary>
+        /// Defines the size for reference types (Unity String/IntPtr). Value type sizes are derived from the 'Type'.
+        /// </summary>
+        public int size { get; init; }
+    }
+
     // EFT/Unity Structures (WIP)
 
     public struct GameObjectManager

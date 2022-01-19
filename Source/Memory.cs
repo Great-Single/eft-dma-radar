@@ -137,15 +137,18 @@ namespace eft_dma_radar
         /// Performs multiple reads in one sequence, significantly faster than single reads.
         /// </summary>
         // Credit to asmfreak https://www.unknowncheats.me/forum/3345474-post27.html
-        public static object[] ReadScatter(ulong[] addr, Type[] types)
+        public static object[] ReadScatter(ScatterReadEntry[] entries)
         {
             ThrowIfDMAShutdown();
             uint dwMemScatters = 0;
             List<ulong> toScatter = new List<ulong>();
-            for (int i = 0; i < addr.Length; i++)
+            for (int i = 0; i < entries.Length; i++)
             {
-                ulong dwAddress = addr[i];
-                uint size = (uint)Marshal.SizeOf(types[i]);
+                ulong dwAddress = entries[i].addr;
+                uint size;
+                if (entries[i].type == typeof(IntPtr) || entries[i].type == typeof(string))
+                    size = (uint)entries[i].size;
+                else size = (uint)Marshal.SizeOf(entries[i].type);
 
                 //get the number of pages
                 uint dwNumPages = GetNumberOfPages(dwAddress, size);
@@ -158,16 +161,19 @@ namespace eft_dma_radar
                 }
             }
             var scatters = vmm.MemReadScatter(_pid, vmm.FLAG_NOCACHE, toScatter.ToArray());
+            object[] results = new object[entries.Length];
 
-            object[] results = new object[addr.Length];
             dwMemScatters = 0;
-            for (int i = 0; i < addr.Length; i++)
+            for (int i = 0; i < entries.Length; i++)
             {
-                ulong dwAdd = addr[i];
+                ulong dwAdd = entries[i].addr;
 
                 uint dwPageOffset = PAGE_OFFSET(dwAdd);
 
-                uint size = (uint)Marshal.SizeOf(types[i]);
+                uint size;
+                if (entries[i].type == typeof(IntPtr) || entries[i].type == typeof(string))
+                    size = (uint)entries[i].size;
+                else size = (uint)Marshal.SizeOf(entries[i].type);
                 byte[] buffer = new byte[size];
                 int bufferOffset = 0;
                 uint cb = Math.Min(size, (uint)Environment.SystemPageSize - dwPageOffset);
@@ -197,13 +203,28 @@ namespace eft_dma_radar
                 }
                 try
                 {
-                    if (types[i] == typeof(ulong))
+                    if (entries[i].type == typeof(ulong))
                     {
                         results[i] = BitConverter.ToUInt64(buffer);
                     }
-                    else if (types[i] == typeof(float))
+                    else if (entries[i].type == typeof(float))
                     {
                         results[i] = BitConverter.ToSingle(buffer);
+                    }
+                    else if (entries[i].type == typeof(int))
+                    {
+                        results[i] = BitConverter.ToInt32(buffer);
+                    }
+                    else if (entries[i].type == typeof(IntPtr))
+                    {
+                        if (buffer.Length != size) throw new DMAException("Incomplete buffer read!");
+                        var memBuf = Marshal.AllocHGlobal((int)size); // alloc memory (must free later)
+                        Marshal.Copy(buffer, 0, memBuf, (int)size); // Copy to mem buffer
+                        results[i] = memBuf; // Store ref to mem buffer
+                    }
+                    else if (entries[i].type == typeof(string)) // Assumed Unity String
+                    {
+                        results[i] = Encoding.Unicode.GetString(buffer);
                     }
                 }
                 catch (Exception ex)

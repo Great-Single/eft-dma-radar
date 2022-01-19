@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace eft_dma_radar
 {
@@ -43,42 +44,72 @@ namespace eft_dma_radar
             {
                 _registered.Clear();
                 var count = this.PlayerCount; // cache count
-                ulong[] addr = new ulong[count];
-                Type[] types = new Type[count];
+                ScatterReadEntry[] toScatter = new ScatterReadEntry[count];
                 for (uint i = 0; i < count; i++)
                 {
-                    addr[i] = _listBase + 0x20 + (i * 0x8);
-                    types[i] = typeof(ulong);
+                    toScatter[i] = new ScatterReadEntry()
+                    {
+                        addr = _listBase + 0x20 + (i * 0x8),
+                        type = typeof(ulong)
+                    };
                 }
-                var playerBase = Memory.ReadScatter(addr, types);
+                var playerBase = Memory.ReadScatter(toScatter);
                 for (uint i = 0; i < count; i++)
                 {
-                    addr[i] = (ulong)playerBase[i] + 0x4B8;
+                    toScatter[i] = new ScatterReadEntry()
+                    {
+                        addr = (ulong)playerBase[i] + 0x4B8,
+                        type = typeof(ulong)
+                    };
                 }
-                var playerProfile = Memory.ReadScatter(addr, types);
+                var playerProfile = Memory.ReadScatter(toScatter);
                 for (uint i = 0; i < count; i++)
                 {
-                    addr[i] = (ulong)playerProfile[i] + 0x10;
+                    toScatter[i] = new ScatterReadEntry()
+                    {
+                        addr = (ulong)playerProfile[i] + 0x10,
+                        type = typeof(ulong)
+                    };
                 }
-                var playerId = Memory.ReadScatter(addr, types);
+                var playerId = Memory.ReadScatter(toScatter);
+                for (uint i = 0; i < count; i++)
+                {
+                    toScatter[i] = new ScatterReadEntry()
+                    {
+                        addr = (ulong)playerId[i] + 0x10,
+                        type = typeof(int)
+                    };
+                }
+                var playerIdLen = Memory.ReadScatter(toScatter);
+                for (uint i = 0; i < count; i++)
+                {
+                    toScatter[i] = new ScatterReadEntry()
+                    {
+                        addr = (ulong)playerId[i] + 0x14,
+                        type = typeof(string),
+                        size = (int)playerIdLen[i] * 2
+                    };
+                }
+                var playerIdStr = Memory.ReadScatter(toScatter);
                 for (uint i = 0; i < count; i++)
                 {
                     try
                     {
-                        var playerIdString = Memory.ReadUnityString((ulong)playerId[i]); // Player's Personal ID ToDo Testing
-                        if (!_players.ContainsKey(playerIdString))
+                        var id = (string)playerIdStr[i];
+                        if (id is null || id == String.Empty) throw new Exception("Player ID is blank/invalid.");
+                        if (!_players.ContainsKey(id))
                         {
                             var player = new Player((ulong)playerBase[i], (ulong)playerProfile[i]); // allocate player object
-                            _players.TryAdd(playerIdString, player);
+                            _players.TryAdd(id, player);
                         }
                         else
                         {
-                            lock (_players[playerIdString])
+                            lock (_players[id])
                             {
-                                _players[playerIdString].IsActive = true;
+                                _players[id].IsActive = true;
                             }
                         }
-                        _registered.Add(playerIdString);
+                        _registered.Add(id);
                     }
                     catch (Exception ex)
                     {
@@ -109,37 +140,75 @@ namespace eft_dma_radar
             try
             {
                 var players = _players.Where(x => x.Value.IsActive && x.Value.IsAlive).ToArray();
-                ulong[] toScatter = new ulong[players.Length + (players.Length * 7)];
-                Type[] types = new Type[players.Length + (players.Length * 7)];
+                ScatterReadEntry[] toScatter = new ScatterReadEntry[(players.Length * 2) + (players.Length * 7)];
                 int index = 0;
                 for (int i = 0; i < players.Length; i++)
                 {
-                    toScatter[index] = players[i].Value.MovementContext + 0x22C;
-                    types[index] = typeof(float);
-                    index++;
+                    toScatter[index++] = new ScatterReadEntry()
+                    {
+                        addr = players[i].Value.MovementContext + 0x22C,
+                        type = typeof(float)
+                    };
                     for (int p = 0; p < 7; p++)
                     {
-                        toScatter[index] = players[i].Value.BodyParts[p] + 0x10;
-                        types[index] = typeof(float);
-                        index++;
+                        toScatter[index++] = new ScatterReadEntry()
+                        {
+                            addr = players[i].Value.BodyParts[p] + 0x10,
+                            type = typeof(float)
+                        };
                     }
+                    toScatter[index++] = new ScatterReadEntry()
+                    {
+                        addr = players[i].Value.PlayerTransformInternal + 0x40,
+                        type = typeof(int)
+                    };
                 }
-                var scatterRead = Memory.ReadScatter(toScatter, types);
+                var scatterRead = Memory.ReadScatter(toScatter);
                 index = 0;
+                int[] posIndexes = new int[players.Length]; // used for next scatter read
                 for (int i = 0; i < players.Length; i++)
                 {
                     lock (players[i].Value)
                     {
-                        players[i].Value.GetDirection((float)scatterRead[index]);
-                        index++;
+                        players[i].Value.SetDirection((float)scatterRead[index++]);
                         float[] bodyParts = new float[7];
                         for (int p = 0; p < 7; p++)
                         {
-                            bodyParts[p] = (float)scatterRead[index];
-                            index++;
+                            bodyParts[p] = (float)scatterRead[index++];
                         }
-                        players[i].Value.GetHealth(bodyParts);
-                        players[i].Value.GetPosition(); // non scatter
+                        posIndexes[i] = (int)scatterRead[index++];
+                        players[i].Value.SetHealth(bodyParts);
+                    }
+                }
+                toScatter = new ScatterReadEntry[players.Length * 2];
+                index = 0;
+                for (int i = 0; i < players.Length; i++)
+                {
+                    toScatter[index++] = new ScatterReadEntry()
+                    {
+                        addr = players[i].Value.PlayerTransformMatrixListBase,
+                        type = typeof(IntPtr),
+                        size = Marshal.SizeOf(typeof(Matrix34)) * posIndexes[i] + Marshal.SizeOf(typeof(Matrix34))
+                    };
+                    toScatter[index++] = new ScatterReadEntry()
+                    {
+                        addr = players[i].Value.PlayerTransformDependencyIndexTableBase,
+                        type = typeof(IntPtr),
+                        size = Marshal.SizeOf(typeof(int)) * posIndexes[i] + Marshal.SizeOf(typeof(int))
+                    };
+                }
+                scatterRead = Memory.ReadScatter(toScatter);
+                index = 0;
+                for (int i = 0; i < players.Length; i++)
+                {
+                    object[] ptrs = new object[2]
+                    {
+                        scatterRead[index++],
+                        scatterRead[index++]
+                    };
+                    lock (players[i].Value)
+                    {
+                        players[i].Value.SetPosition(ptrs, posIndexes[i]);
                     }
                 }
             }

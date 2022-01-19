@@ -20,7 +20,9 @@ namespace eft_dma_radar
         private readonly ulong _healthController;
         public readonly ulong[] BodyParts;
         public readonly ulong MovementContext;
-        private readonly ulong _playerTransform;
+        public readonly ulong PlayerTransformInternal;
+        public readonly ulong PlayerTransformMatrixListBase;
+        public readonly ulong PlayerTransformDependencyIndexTableBase;
         public int Health = -1;
         public bool IsAlive = true;
         public bool IsActive = true;
@@ -41,7 +43,10 @@ namespace eft_dma_radar
                     BodyParts[i] = Memory.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
                 }
                 MovementContext = Memory.ReadPtr(_playerBase + 0x40);
-                _playerTransform = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 });
+                PlayerTransformInternal = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20, 0x10 });
+                var playersTransfPMatrix = Memory.ReadPtr(PlayerTransformInternal + 0x38);
+                PlayerTransformMatrixListBase = Memory.ReadPtr(playersTransfPMatrix + 0x18);
+                PlayerTransformDependencyIndexTableBase = Memory.ReadPtr(playersTransfPMatrix + 0x20);
                 //var grpPtr = Memory.ReadPtr(_playerInfo + 0x18);
                 //GroupID = Memory.ReadString(grpPtr, 8);
                 var namePtr = Memory.ReadPtr(_playerInfo + 0x10);
@@ -81,16 +86,16 @@ namespace eft_dma_radar
         {
             if (IsAlive && IsActive) // Only update if alive/in-raid
             {
-                GetPosition();
-                GetDirection();
-                GetHealth();
+                SetPosition();
+                SetDirection();
+                SetHealth();
             }
         }
 
         /// <summary>
         /// Get current player health.
         /// </summary>
-        public void GetHealth(float[] values = null)
+        public void SetHealth(float[] values = null)
         {
             try
             {
@@ -118,7 +123,7 @@ namespace eft_dma_radar
             }
         }
 
-        public void GetDirection(float? deg = null)
+        public void SetDirection(float? deg = null)
         {
             try
             {
@@ -139,28 +144,30 @@ namespace eft_dma_radar
         /// <summary>
         /// Converts player transform to X,Y,Z coordinates (Vector3)
         /// </summary>
-        public unsafe void GetPosition()
+        public unsafe void SetPosition(object[] ptrs = null, int? indexArg = null)
         {
             try
             {
-                var transform_internal = Memory.ReadPtr(_playerTransform + 0x10);
-
-                var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
-                int index = Memory.ReadInt(transform_internal + 0x40);
-
-                var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
-
-                var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
-
-                IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
+                IntPtr pMatricesBufPtr;
+                IntPtr pIndicesBufPtr;
+                int index;
+                if (ptrs is null || indexArg is null) // Read on demand
+                {
+                    index = Memory.ReadInt(PlayerTransformInternal + 0x40);
+                    pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
+                    Memory.ReadBuffer(PlayerTransformMatrixListBase, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
+                    pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
+                    Memory.ReadBuffer(PlayerTransformDependencyIndexTableBase, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
+                }
+                else // Scatter read
+                {
+                    pMatricesBufPtr = (IntPtr)ptrs[0];
+                    pIndicesBufPtr = (IntPtr)ptrs[1];
+                    index = (int)indexArg;
+                }
                 void* pMatricesBuf = pMatricesBufPtr.ToPointer();
-                Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
-
-                IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
                 void* pIndicesBuf = pIndicesBufPtr.ToPointer();
-                Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
-
-
+                
                 Vector4 result = *(Vector4*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index);
                 int index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index);
 
