@@ -49,7 +49,7 @@ namespace eft_dma_radar
         {
             try
             {
-                var addr = Memory.ReadPtr(Memory.BaseModule + 0x17F8D28);
+                var addr = Memory.ReadPtr(Memory.BaseModule + Offsets.ModuleBase_GameObjectManager);
                 _gom = Memory.ReadStruct<GameObjectManager>(addr);
                 Debug.WriteLine($"Found Game Object Manager at 0x{addr.ToString("X")}");
                 return true;
@@ -75,7 +75,7 @@ namespace eft_dma_radar
                 {
                     try
                     {
-                        var objectNamePtr = Memory.ReadPtr(activeObject.obj + 0x60);
+                        var objectNamePtr = Memory.ReadPtr(activeObject.obj + Offsets.UnityObject_Name);
                         var objectNameStr = Memory.ReadString(objectNamePtr, 24);
                         if (objectNameStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
                         {
@@ -107,8 +107,8 @@ namespace eft_dma_radar
                     Memory.ReadPtr(_gom.LastActiveNode),
                     "GameWorld");
                 if (gameWorld == 0) throw new DMAException("Unable to find GameWorld Object, likely not in raid.");
-                _localGameWorld = Memory.ReadPtrChain(gameWorld, new uint[] { 0x30, 0x18, 0x28 }); // Game world >> Local Game World
-                var rgtPlayers = new RegisteredPlayers(Memory.ReadPtr(_localGameWorld + 0x80));
+                _localGameWorld = Memory.ReadPtrChain(gameWorld, Offsets.GameWorld_LocalGameWorld); // Game world >> Local Game World
+                var rgtPlayers = new RegisteredPlayers(Memory.ReadPtr(_localGameWorld + Offsets.RegisteredPlayers));
                 if (rgtPlayers.PlayerCount > 1) // Make sure not in hideout,etc.
                 {
                     _rgtPlayers = rgtPlayers;

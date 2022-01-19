@@ -17,7 +17,6 @@ namespace eft_dma_radar
         private readonly ulong _playerBase;
         private readonly ulong _playerProfile;
         private readonly ulong _playerInfo;
-        private readonly ulong _healthController;
         public readonly ulong[] BodyParts;
         public readonly ulong MovementContext;
         public readonly ulong PlayerTransformInternal;
@@ -35,23 +34,23 @@ namespace eft_dma_radar
             {
                 _playerBase = playerBase;
                 _playerProfile = playerProfile;
-                _playerInfo = Memory.ReadPtr(playerProfile + 0x28);
-                _healthController = Memory.ReadPtrChain(_playerBase, new uint[] { 0x4F0, 0x50, 0x18 });
+                _playerInfo = Memory.ReadPtr(playerProfile + Offsets.PlayerProfile_PlayerInfo);
+                var healthController = Memory.ReadPtrChain(_playerBase, Offsets.PlayerBase_HealthController);
                 BodyParts = new ulong[7];
                 for (uint i = 0; i < 7; i++)
-                {
-                    BodyParts[i] = Memory.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
+                {                                                                          //dict
+                    BodyParts[i] = Memory.ReadPtrChain(healthController, new uint[] { 0x30 + (i * 0x18), Offsets.HealthEntry });
                 }
-                MovementContext = Memory.ReadPtr(_playerBase + 0x40);
-                PlayerTransformInternal = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20, 0x10 });
-                var playersTransfPMatrix = Memory.ReadPtr(PlayerTransformInternal + 0x38);
-                PlayerTransformMatrixListBase = Memory.ReadPtr(playersTransfPMatrix + 0x18);
-                PlayerTransformDependencyIndexTableBase = Memory.ReadPtr(playersTransfPMatrix + 0x20);
+                MovementContext = Memory.ReadPtr(_playerBase + Offsets.PlayerBase_MovementContext);
+                PlayerTransformInternal = Memory.ReadPtrChain(_playerBase, Offsets.PlayerBase_PlayerTransformInternal);
+                var playersTransfPMatrix = Memory.ReadPtr(PlayerTransformInternal + Offsets.PlayerTransformInternal_PlayerTransfPMatrix);
+                PlayerTransformMatrixListBase = Memory.ReadPtr(playersTransfPMatrix + Offsets.UnityDictBase);
+                PlayerTransformDependencyIndexTableBase = Memory.ReadPtr(playersTransfPMatrix + Offsets.PlayerTransfPMatrix_PlayerTransformDependencyIndexTableBase);
                 //var grpPtr = Memory.ReadPtr(_playerInfo + 0x18);
                 //GroupID = Memory.ReadString(grpPtr, 8);
-                var namePtr = Memory.ReadPtr(_playerInfo + 0x10);
+                var namePtr = Memory.ReadPtr(_playerInfo + Offsets.PlayerInfo_PlayerName);
                 Name = Memory.ReadUnityString(namePtr);
-                var isLocalPlayer = Memory.ReadBool(_playerBase + 0x7FB);
+                var isLocalPlayer = Memory.ReadBool(_playerBase + Offsets.PlayerBase_IsLocalPlayer);
                 if (isLocalPlayer)
                 {
                     Type = PlayerType.CurrentPlayer;
@@ -60,10 +59,10 @@ namespace eft_dma_radar
                 //else if (GroupID == _currentPlayerGroupID) Type = PlayerType.Teammate;
                 else
                 {
-                    var playerSide = Memory.ReadInt(_playerInfo + 0x58); // Scav, PMC, etc.
+                    var playerSide = Memory.ReadInt(_playerInfo + Offsets.PlayerInfo_PlayerSide); // Scav, PMC, etc.
                     if (playerSide == 0x4)
                     {
-                        var regDate = Memory.ReadInt(_playerInfo + 0x5C); // Bots wont have 'reg date'
+                        var regDate = Memory.ReadInt(_playerInfo + Offsets.PlayerInfo_RegDate); // Bots wont have 'reg date'
                         if (regDate == 0) Type = PlayerType.AIScav;
                         else Type = PlayerType.PlayerScav;
                     }
@@ -103,7 +102,7 @@ namespace eft_dma_radar
                 for (uint i = 0; i < BodyParts.Length; i++)
                 {
                     float health;
-                    if (values is null) health = Memory.ReadFloat(BodyParts[i] + 0x10);
+                    if (values is null) health = Memory.ReadFloat(BodyParts[i] + Offsets.HealthEntry_Value);
                     else health = values[i];
                     totalHealth += health;
                     if (i == 0 || i == 1) // Head/thorax
@@ -127,7 +126,7 @@ namespace eft_dma_radar
         {
             try
             {
-                if (deg is null) deg = Memory.ReadFloat(MovementContext + 0x22C);
+                if (deg is null) deg = Memory.ReadFloat(MovementContext + Offsets.MovementContext_Direction);
                 if (deg < 0)
                 {
                     Direction = 360f + (float)deg;
@@ -153,7 +152,7 @@ namespace eft_dma_radar
                 int index;
                 if (ptrs is null || indexArg is null) // Read on demand
                 {
-                    index = Memory.ReadInt(PlayerTransformInternal + 0x40);
+                    index = Memory.ReadInt(PlayerTransformInternal + Offsets.PlayerTransformInternal_Index);
                     pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
                     Memory.ReadBuffer(PlayerTransformMatrixListBase, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
                     pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());

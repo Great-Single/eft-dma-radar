@@ -155,18 +155,26 @@ namespace eft_dma_radar
         }
     }
 
+    /// <summary>
+    /// Used as a parameter for Memory.ReadScatter()
+    /// </summary>
     public struct ScatterReadEntry
     {
+        /// <summary>
+        /// Virtual memory address to read from.
+        /// </summary>
         public ulong addr { get; init; }
+        /// <summary>
+        /// Object type located at this read location.
+        /// </summary>
         public Type type { get; init; }
         /// <summary>
-        /// Defines the size for reference types (Unity String/IntPtr). Value type sizes are derived from the 'Type'.
+        /// Defines the size for reference types (Unity String/IntPtr). Value type sizes are derived from the 'Type', and this can be left empty.
         /// </summary>
         public int size { get; init; }
     }
 
     // EFT/Unity Structures (WIP)
-
     public struct GameObjectManager
     {
         public ulong LastTaggedNode; // 0x0

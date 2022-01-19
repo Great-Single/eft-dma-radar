@@ -407,9 +407,9 @@ namespace eft_dma_radar
             try
             {
                 ThrowIfDMAShutdown();
-                var length = (uint)ReadInt(addr + 0x10);
+                var length = (uint)ReadInt(addr + Offsets.UnityString_Len);
                 return Encoding.Unicode.GetString(
-                    vmm.MemRead(_pid, addr + 0x14, length * 2, vmm.FLAG_NOCACHE));
+                    vmm.MemRead(_pid, addr + Offsets.UnityString_Value, length * 2, vmm.FLAG_NOCACHE));
             }
             catch (Exception ex)
             {
@@ -447,8 +447,15 @@ namespace eft_dma_radar
         }
 
         // Helper DLL to perform memory alignment macros
+
+        /// <summary>
+        /// Returns memory address of aligned page.
+        /// </summary>
         [DllImport("memalign.dll")]
         private static extern ulong PageAlign(ulong addr);
+        /// <summary>
+        /// Returns the number of pages the address/size is within.
+        /// </summary>
         [DllImport("memalign.dll")]
         private static extern uint GetNumberOfPages(ulong addr, uint size);
     }

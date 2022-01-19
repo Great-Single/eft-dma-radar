@@ -23,14 +23,14 @@ namespace eft_dma_radar
         {
             get
             {
-                return Memory.ReadInt(_base + 0x18);
+                return Memory.ReadInt(_base + Offsets.RegisteredPlayers_Count);
             }
         }
 
         public RegisteredPlayers(ulong baseAddr)
         {
             _base = baseAddr;
-            _listBase = Memory.ReadPtr(_base + 0x0010);
+            _listBase = Memory.ReadPtr(_base + Offsets.UnityListBase);
             _registered = new HashSet<string>();
             _players = new ConcurrentDictionary<string, Player>();
         }
@@ -49,7 +49,7 @@ namespace eft_dma_radar
                 {
                     toScatter[i] = new ScatterReadEntry()
                     {
-                        addr = _listBase + 0x20 + (i * 0x8),
+                        addr = _listBase + Offsets.UnityListBase_Start + (i * 0x8),
                         type = typeof(ulong)
                     };
                 }
@@ -58,7 +58,7 @@ namespace eft_dma_radar
                 {
                     toScatter[i] = new ScatterReadEntry()
                     {
-                        addr = (ulong)playerBase[i] + 0x4B8,
+                        addr = (ulong)playerBase[i] + Offsets.PlayerBase_Profile,
                         type = typeof(ulong)
                     };
                 }
@@ -67,7 +67,7 @@ namespace eft_dma_radar
                 {
                     toScatter[i] = new ScatterReadEntry()
                     {
-                        addr = (ulong)playerProfile[i] + 0x10,
+                        addr = (ulong)playerProfile[i] + Offsets.PlayerProfile_PlayerId,
                         type = typeof(ulong)
                     };
                 }
@@ -76,7 +76,7 @@ namespace eft_dma_radar
                 {
                     toScatter[i] = new ScatterReadEntry()
                     {
-                        addr = (ulong)playerId[i] + 0x10,
+                        addr = (ulong)playerId[i] + Offsets.UnityString_Len,
                         type = typeof(int)
                     };
                 }
@@ -85,7 +85,7 @@ namespace eft_dma_radar
                 {
                     toScatter[i] = new ScatterReadEntry()
                     {
-                        addr = (ulong)playerId[i] + 0x14,
+                        addr = (ulong)playerId[i] + Offsets.UnityString_Value,
                         type = typeof(string),
                         size = (int)playerIdLen[i] * 2
                     };
@@ -146,20 +146,20 @@ namespace eft_dma_radar
                 {
                     toScatter[index++] = new ScatterReadEntry()
                     {
-                        addr = players[i].Value.MovementContext + 0x22C,
+                        addr = players[i].Value.MovementContext + Offsets.MovementContext_Direction,
                         type = typeof(float)
                     };
                     for (int p = 0; p < 7; p++)
                     {
                         toScatter[index++] = new ScatterReadEntry()
                         {
-                            addr = players[i].Value.BodyParts[p] + 0x10,
+                            addr = players[i].Value.BodyParts[p] + Offsets.HealthEntry_Value,
                             type = typeof(float)
                         };
                     }
                     toScatter[index++] = new ScatterReadEntry()
                     {
-                        addr = players[i].Value.PlayerTransformInternal + 0x40,
+                        addr = players[i].Value.PlayerTransformInternal + Offsets.PlayerTransformInternal_Index,
                         type = typeof(int)
                     };
                 }
