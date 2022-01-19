@@ -132,15 +132,22 @@ namespace eft_dma_radar
         /// </summary>
         public void GameLoop()
         {
-            int playerCount = _rgtPlayers.PlayerCount;
-            if (playerCount < 1 || playerCount > 1024)
+            try
             {
-                Debug.WriteLine("Raid has ended!");
-                InGame = false;
-                return;
+                int playerCount = _rgtPlayers.PlayerCount;
+                if (playerCount < 1 || playerCount > 1024)
+                {
+                    Debug.WriteLine("Raid has ended!");
+                    InGame = false;
+                    return;
+                }
+                _rgtPlayers.UpdateList(); // Check for new players, add to list
+                _rgtPlayers.UpdateAllPlayers(); // Update all player locations,etc.
             }
-            _rgtPlayers.UpdateList(); // Check for new players, add to list
-            _rgtPlayers.UpdateAllPlayers(); // Update all player locations,etc.
+            catch
+            {
+                InGame = false;
+            }
         }
     }
 }
