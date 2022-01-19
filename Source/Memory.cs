@@ -133,6 +133,10 @@ namespace eft_dma_radar
             }
         }
 
+        /// <summary>
+        /// Performs multiple reads in one sequence, significantly faster than single reads.
+        /// </summary>
+        // Credit to asmfreak https://www.unknowncheats.me/forum/3345474-post27.html
         public static object[] ReadScatter(ulong[] addr, Type[] types)
         {
             uint dwMemScatters = 0;
