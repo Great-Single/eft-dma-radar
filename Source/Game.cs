@@ -147,6 +147,7 @@ namespace eft_dma_radar
             catch
             {
                 InGame = false;
+                throw;
             }
         }
     }
