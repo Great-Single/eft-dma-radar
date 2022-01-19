@@ -133,14 +133,14 @@ namespace eft_dma_radar
             }
         }
 
-        public static ulong[] ReadScatter(ulong[] addr)
+        public static object[] ReadScatter(ulong[] addr, Type[] types)
         {
             uint dwMemScatters = 0;
             List<ulong> toScatter = new List<ulong>();
             for (int i = 0; i < addr.Length; i++)
             {
                 ulong dwAddress = addr[i];
-                uint size = (uint)Marshal.SizeOf(typeof(ulong));
+                uint size = (uint)Marshal.SizeOf(types[i]);
 
                 //get the number of pages
                 uint dwNumPages = GetNumberOfPages(dwAddress, size);
@@ -153,9 +153,8 @@ namespace eft_dma_radar
                 }
             }
             var scatters = vmm.MemReadScatter(_pid, vmm.FLAG_NOCACHE, toScatter.ToArray());
-            uint dwProcessedCount = (uint)scatters.Length;
 
-            ulong[] results = new ulong[addr.Length];
+            object[] results = new object[addr.Length];
             dwMemScatters = 0;
             for (int i = 0; i < addr.Length; i++)
             {
@@ -163,7 +162,7 @@ namespace eft_dma_radar
 
                 uint dwPageOffset = PAGE_OFFSET(dwAdd);
 
-                uint size = (uint)Marshal.SizeOf(typeof(ulong));
+                uint size = (uint)Marshal.SizeOf(types[i]);
                 byte[] buffer = new byte[size];
                 int bufferOffset = 0;
                 uint cb = Math.Min(size, (uint)Environment.SystemPageSize - dwPageOffset);
@@ -191,7 +190,21 @@ namespace eft_dma_radar
                     dwPageOffset = 0;
                     dwMemScatters++;
                 }
-                results[i] = BitConverter.ToUInt64(buffer);
+                try
+                {
+                    if (types[i] == typeof(ulong))
+                    {
+                        results[i] = BitConverter.ToUInt64(buffer);
+                    }
+                    else if (types[i] == typeof(float))
+                    {
+                        results[i] = BitConverter.ToSingle(buffer);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error parsing result from Scatter Read: {ex}");
+                }
             }
             return results;
         }
@@ -208,7 +221,9 @@ namespace eft_dma_radar
         public static void ReadBuffer(ulong addr, IntPtr bufPtr, int size)
         {
             ThrowIfDMAShutdown();
-            Marshal.Copy(vmm.MemRead(_pid, addr, (uint)size, vmm.FLAG_NOCACHE)
+            var readBuf = vmm.MemRead(_pid, addr, (uint)size, vmm.FLAG_NOCACHE);
+            if (readBuf.Length != size) throw new DMAException("Incomplete buffer read!");
+            Marshal.Copy(readBuf
                 , 0, bufPtr, size);
         }
 

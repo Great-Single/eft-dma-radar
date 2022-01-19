@@ -18,8 +18,8 @@ namespace eft_dma_radar
         private readonly ulong _playerProfile;
         private readonly ulong _playerInfo;
         private readonly ulong _healthController;
-        private readonly ulong[] _bodyParts;
-        private readonly ulong _movementContext;
+        public readonly ulong[] BodyParts;
+        public readonly ulong MovementContext;
         private readonly ulong _playerTransform;
         public int Health = -1;
         public bool IsAlive = true;
@@ -35,12 +35,12 @@ namespace eft_dma_radar
                 _playerProfile = playerProfile;
                 _playerInfo = Memory.ReadPtr(playerProfile + 0x28);
                 _healthController = Memory.ReadPtrChain(_playerBase, new uint[] { 0x4F0, 0x50, 0x18 });
-                _bodyParts = new ulong[7];
+                BodyParts = new ulong[7];
                 for (uint i = 0; i < 7; i++)
                 {
-                    _bodyParts[i] = Memory.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
+                    BodyParts[i] = Memory.ReadPtrChain(_healthController, new uint[] { 0x30 + (i * 0x18), 0x10 });
                 }
-                _movementContext = Memory.ReadPtr(_playerBase + 0x40);
+                MovementContext = Memory.ReadPtr(_playerBase + 0x40);
                 _playerTransform = Memory.ReadPtrChain(_playerBase, new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 });
                 //var grpPtr = Memory.ReadPtr(_playerInfo + 0x18);
                 //GroupID = Memory.ReadString(grpPtr, 8);
@@ -79,106 +79,122 @@ namespace eft_dma_radar
         /// </summary>
         public void Update()
         {
-            try
+            if (IsAlive && IsActive) // Only update if alive/in-raid
             {
-                if (IsAlive && IsActive) // Only update if alive/in-raid
-                {
-
-                    Position = GetPosition();
-                    Direction = GetDirection();
-                    Health = GetHealth();
-                }
-            } 
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"ERROR updating player '{Name}': {ex}");
+                GetPosition();
+                GetDirection();
+                GetHealth();
             }
         }
 
         /// <summary>
         /// Get current player health.
         /// </summary>
-        private int GetHealth()
+        public void GetHealth(float[] values = null)
         {
-            float totalHealth = 0;
-            for (uint i = 0; i < _bodyParts.Length; i++)
+            try
             {
-                var health = Memory.ReadFloat(_bodyParts[i] + 0x10);
-                totalHealth += health;
-                if (i == 0 || i == 1) // Head/thorax
+                float totalHealth = 0;
+                for (uint i = 0; i < BodyParts.Length; i++)
                 {
-                    if (health == 0f)
+                    float health;
+                    if (values is null) health = Memory.ReadFloat(BodyParts[i] + 0x10);
+                    else health = values[i];
+                    totalHealth += health;
+                    if (i == 0 || i == 1) // Head/thorax
                     {
-                        IsAlive = false;
-                        break;
+                        if (health == 0f)
+                        {
+                            IsAlive = false;
+                            break;
+                        }
                     }
                 }
+                Health = (int)Math.Round(totalHealth);
             }
-            return (int)Math.Round(totalHealth);
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR getting Player {Name} Health: {ex}");
+            }
         }
 
-        private float GetDirection()
+        public void GetDirection(float? deg = null)
         {
-            float deg = Memory.ReadFloat(_movementContext + 0x22C);
-            if (deg < 0)
+            try
             {
-                return 360f + deg;
+                if (deg is null) deg = Memory.ReadFloat(MovementContext + 0x22C);
+                if (deg < 0)
+                {
+                    Direction = 360f + (float)deg;
+                    return;
+                }
+                Direction = (float)deg;
             }
-            return deg;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR getting Player {Name} Direction: {ex}");
+            }
         }
 
         /// <summary>
         /// Converts player transform to X,Y,Z coordinates (Vector3)
         /// </summary>
-        private unsafe Vector3 GetPosition()
+        public unsafe void GetPosition()
         {
-            var transform_internal = Memory.ReadPtr(_playerTransform + 0x10);
-
-            var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
-            int index = Memory.ReadInt(transform_internal + 0x40);
-
-            var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
-
-            var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
-
-            IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
-            void* pMatricesBuf = pMatricesBufPtr.ToPointer();
-            Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
-
-            IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
-            void* pIndicesBuf = pIndicesBufPtr.ToPointer();
-            Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
-
-
-            Vector4 result = *(Vector4*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index);
-            int index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index);
-
-            Vector4 xmmword_1410D1340 = new Vector4(-2.0f, 2.0f, -2.0f, 0.0f);
-            Vector4 xmmword_1410D1350 = new Vector4(2.0f, -2.0f, -2.0f, 0.0f);
-            Vector4 xmmword_1410D1360 = new Vector4(-2.0f, -2.0f, 2.0f, 0.0f);
-
-            while (index_relation >= 0)
+            try
             {
-                Matrix34 matrix34 = *(Matrix34*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index_relation);
+                var transform_internal = Memory.ReadPtr(_playerTransform + 0x10);
 
-                Vector4 v10 = matrix34.vec2 * result;
-                Vector4 v11 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(0)));
-                Vector4 v12 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(85)));
-                Vector4 v13 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-114)));
-                Vector4 v14 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-37)));
-                Vector4 v15 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-86)));
-                Vector4 v16 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(113)));
-                result = (((((((v11 * xmmword_1410D1350) * v13) - ((v12 * xmmword_1410D1360) * v14)) * Shuffle(v10, (ShuffleSel)(-86))) +
-                    ((((v15 * xmmword_1410D1360) * v14) - ((v11 * xmmword_1410D1340) * v16)) * Shuffle(v10, (ShuffleSel)(85)))) +
-                    (((((v12 * xmmword_1410D1340) * v16) - ((v15 * xmmword_1410D1350) * v13)) * Shuffle(v10, (ShuffleSel)(0))) + v10)) + matrix34.vec0);
-                index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index_relation);
+                var pMatrix = Memory.ReadPtr(transform_internal + 0x38);
+                int index = Memory.ReadInt(transform_internal + 0x40);
+
+                var matrix_list_base = Memory.ReadPtr(pMatrix + 0x18);
+
+                var dependency_index_table_base = Memory.ReadPtr(pMatrix + 0x20);
+
+                IntPtr pMatricesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)).ToInt64()); // sizeof(Matrix34) == 48
+                void* pMatricesBuf = pMatricesBufPtr.ToPointer();
+                Memory.ReadBuffer(matrix_list_base, pMatricesBufPtr, sizeof(Matrix34) * index + sizeof(Matrix34));
+
+                IntPtr pIndicesBufPtr = new IntPtr(Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int)).ToInt64());
+                void* pIndicesBuf = pIndicesBufPtr.ToPointer();
+                Memory.ReadBuffer(dependency_index_table_base, pIndicesBufPtr, sizeof(int) * index + sizeof(int));
+
+
+                Vector4 result = *(Vector4*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index);
+                int index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index);
+
+                Vector4 xmmword_1410D1340 = new Vector4(-2.0f, 2.0f, -2.0f, 0.0f);
+                Vector4 xmmword_1410D1350 = new Vector4(2.0f, -2.0f, -2.0f, 0.0f);
+                Vector4 xmmword_1410D1360 = new Vector4(-2.0f, -2.0f, 2.0f, 0.0f);
+
+                while (index_relation >= 0)
+                {
+                    Matrix34 matrix34 = *(Matrix34*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index_relation);
+
+                    Vector4 v10 = matrix34.vec2 * result;
+                    Vector4 v11 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(0)));
+                    Vector4 v12 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(85)));
+                    Vector4 v13 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-114)));
+                    Vector4 v14 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-37)));
+                    Vector4 v15 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(-86)));
+                    Vector4 v16 = (Vector4)(Shuffle(matrix34.vec1, (ShuffleSel)(113)));
+                    result = (((((((v11 * xmmword_1410D1350) * v13) - ((v12 * xmmword_1410D1360) * v14)) * Shuffle(v10, (ShuffleSel)(-86))) +
+                        ((((v15 * xmmword_1410D1360) * v14) - ((v11 * xmmword_1410D1340) * v16)) * Shuffle(v10, (ShuffleSel)(85)))) +
+                        (((((v12 * xmmword_1410D1340) * v16) - ((v15 * xmmword_1410D1350) * v13)) * Shuffle(v10, (ShuffleSel)(0))) + v10)) + matrix34.vec0);
+                    index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index_relation);
+                }
+
+                // Free mem
+                Recycler.Pointers.Add(pMatricesBufPtr);
+                Recycler.Pointers.Add(pIndicesBufPtr);
+
+                Position = new Vector3(result.X, result.Z, result.Y);
             }
-
-            // Free mem
-            Recycler.Pointers.Add(pMatricesBufPtr);
-            Recycler.Pointers.Add(pIndicesBufPtr);
-
-            return new Vector3(result.X, result.Z, result.Y);
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR getting Player {Name} Position: {ex}");
+            }
         }
 
         private static unsafe Vector4 Shuffle(Vector4 v1, ShuffleSel sel)
