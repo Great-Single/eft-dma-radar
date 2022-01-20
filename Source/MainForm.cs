@@ -316,7 +316,7 @@ namespace eft_dma_radar
             {
                 X = (int)Math.Round(x),
                 Y = (int)Math.Round(y),
-                Height = (int)Math.Round(vector.Z)
+                Height = vector.Z // Keep as float, calculation done later
             };
         }
 
