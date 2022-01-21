@@ -26,7 +26,10 @@ namespace eft_dma_radar
         private Bitmap _currentRender; // Currently rendered frame
         private const int _strokeWidth = 6;
         private static ulong _playerBase = 0;
+        private static ulong _playerProfile = 0;
         private ulong _physical;
+        private ulong _skills;
+        private ulong _movementcontext;
         private float value = 0;
 
         private Player CurrentPlayer
@@ -81,9 +84,10 @@ namespace eft_dma_radar
         {
             Width = _strokeWidth
         };
-        public static ulong Getlocalplayer(ulong playeraddress)
+        public static ulong Getlocalplayer(ulong playeraddress, ulong playerprofile)
         {
             _playerBase = playeraddress;
+            _playerProfile = playerprofile;
             return playeraddress;
         }
 
@@ -396,24 +400,13 @@ namespace eft_dma_radar
         {
             if (InGame)
             { 
-                ulong _stamina1 = Memory.ReadPtr(_physical + 0x28);
-                if (value == 0)
-                {
-                    value = Memory.ReadFloat(_stamina1 + 0x48);
-                }    
-                ulong _stamina2 = Memory.ReadPtr(_physical + 0x38);
-                ulong _stamina3 = Memory.ReadPtr(_physical + 0x30);
-                if (value != 0)
-                {
-                    Memory.WriteMemory(_stamina1 + 0x48, value);
-                    Memory.WriteMemory(_stamina2 + 0x48, value);
-                    Memory.WriteMemory(_stamina3 + 0x48, value);
-                }
-                else
-                {
-                    value = 1000f;
-                }
-               
+                ulong _stamina1 = Memory.ReadPtr(_physical + Offsets.Stamina);
+                ulong _stamina2 = Memory.ReadPtr(_physical + Offsets.HandsStamina);
+                ulong _stamina3 = Memory.ReadPtr(_physical + Offsets.Oxygen);
+                Memory.WriteMemory(_stamina1 + Offsets.Stamina_Value, 100);
+                Memory.WriteMemory(_stamina2 + Offsets.Stamina_Value, 100);
+                Memory.WriteMemory(_stamina3 + Offsets.Stamina_Value, 100);
+
             }
         }
 
@@ -421,13 +414,68 @@ namespace eft_dma_radar
         {
             if (this.checkBox1.Checked && _playerBase != 0)
             {
-                _physical = Memory.ReadPtr(_playerBase + 0x4C8);
+                _physical = Memory.ReadPtr(_playerBase + Offsets.PlayerBase_Physical);
                 timer1.Start();
             }
             else if(!this.checkBox1.Checked && timer1.Enabled)
             {
                 value = 0;
                 timer1.Stop();
+            }
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            if (this.checkBox2.Checked && _playerProfile != 0)
+            {
+                _skills = Memory.ReadPtr(_playerProfile + Offsets.PlayerProfile_PlayerInfo);
+                timer2.Start();
+            }
+            else if (!this.checkBox2.Checked && timer2.Enabled)
+            {
+                timer2.Stop();
+            }
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            if (InGame)
+            {
+                ulong _buff1 = Memory.ReadPtr(_skills + Offsets.MagDrillsUnloadSpeed);
+                ulong _buff2 = Memory.ReadPtr(_skills + Offsets.MagDrillsLoadSpeed);
+                ulong _buff3 = Memory.ReadPtr(_skills + Offsets.StrengthBuffJumpHeightInc);
+                ulong _buff4 = Memory.ReadPtr(_skills + Offsets.StrengthBuffThrowDistanceInc);
+
+
+                Memory.WriteMemory(_buff1 + Offsets.Buff_Value, 180.0f);
+                Memory.WriteMemory(_buff2 + Offsets.Buff_Value, 100.0f);
+                Memory.WriteMemory(_buff3 + Offsets.Buff_Value, 0.6f);
+                Memory.WriteMemory(_buff4 + Offsets.Buff_Value, 0.6f);
+
+            }
+        }
+
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            if (this.checkBox3.Checked && _playerBase != 0)
+            {
+                //currentmovementcontext
+                _movementcontext = Memory.ReadPtr(_playerBase + Offsets.PlayerBase_MovementContext);
+                timer3.Start();
+            }
+            else if (!this.checkBox3.Checked && timer3.Enabled)
+            {
+                timer3.Stop();
+            }
+        }
+
+        private void timer3_Tick(object sender, EventArgs e)
+        {
+            if (InGame)
+            {
+                ulong _fallspeed = Memory.ReadPtr(_movementcontext + Offsets.FreefallTime);
+                Memory.WriteMemory(_fallspeed + Offsets.currentmovementcontext, 0.05f);
+
             }
         }
     }

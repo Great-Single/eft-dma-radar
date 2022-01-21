@@ -36,6 +36,23 @@ namespace eft_dma_radar
 
         public const uint PlayerProfile_PlayerId = 0x10;
         public const uint PlayerProfile_PlayerInfo = 0x28;
+        public const uint PlayerProfile_Skills = 0x60;
+        public const uint WeaponBuffs = 0x10;// (类型 : System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.Dictionary<EFT.EBuffId,>>)
+        public const uint AttentionLootSpeed = 0x150;//增加搜索速度0.02f
+        public const uint AttentionExamine = 0x158;//增加找到更好战利品的几率+检视速度0.02f
+        public const uint AttentionEliteLuckySearch = 0x160;//有几率瞬间完成搜索0.5elite
+        public const uint AttentionEliteExtraLootExp = 0x168;//双倍搜索经验bool
+        public const uint MagDrillsLoadSpeed = 0x170;//提高弹药装填速度0.6
+        public const uint MagDrillsUnloadSpeed = 0x178;//提高弹药的卸载速度0.6
+        public const uint MagDrillsInventoryCheckSpeed = 0x180;//提高使用菜单检查弹匣的速度0.8
+        public const uint MagDrillsInventoryCheckAccuracy = 0x188;//提高使用菜单检查弹匣的准确性
+        public const uint MagDrillsInstantCheck = 0x190;//移动到您的库存后立即检查弹匣bool
+        public const uint MagDrillsLoadProgression = 0x198;//bool
+        public const uint StrengthBuffJumpHeightInc = 0x58;// 0.6 no fall damage
+        public const uint StrengthBuffThrowDistanceInc = 0x68; // 0.6 perfect
+        public const uint currentmovementcontext = 0xB8;
+        public const uint FreefallTime = 0x1F8;
+        public const uint Buff_Value = 0x28;
 
         public const uint PlayerInfo_PlayerName = 0x10;
         public const uint PlayerInfo_PlayerSide = 0x58;
