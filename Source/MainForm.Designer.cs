@@ -28,12 +28,14 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.label_Pos = new System.Windows.Forms.Label();
             this.mapCanvas = new System.Windows.Forms.PictureBox();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.checkBox_Loot = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.trackBar_Zoom = new System.Windows.Forms.TrackBar();
             this.label3 = new System.Windows.Forms.Label();
@@ -42,7 +44,8 @@
             this.trackBar_AimLength = new System.Windows.Forms.TrackBar();
             this.label_Map = new System.Windows.Forms.Label();
             this.button_Map = new System.Windows.Forms.Button();
-            this.checkBox_Loot = new System.Windows.Forms.CheckBox();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.mapCanvas)).BeginInit();
@@ -110,6 +113,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.checkBox1);
             this.groupBox1.Controls.Add(this.checkBox_Loot);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.trackBar_Zoom);
@@ -128,6 +132,17 @@
             this.groupBox1.TabIndex = 8;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Radar Config";
+            // 
+            // checkBox_Loot
+            // 
+            this.checkBox_Loot.AutoSize = true;
+            this.checkBox_Loot.Location = new System.Drawing.Point(38, 107);
+            this.checkBox_Loot.Name = "checkBox_Loot";
+            this.checkBox_Loot.Size = new System.Drawing.Size(105, 19);
+            this.checkBox_Loot.TabIndex = 17;
+            this.checkBox_Loot.Text = "Show Loot (F3)";
+            this.checkBox_Loot.UseVisualStyleBackColor = true;
+            this.checkBox_Loot.CheckedChanged += new System.EventHandler(this.checkBox_Loot_CheckedChanged);
             // 
             // label1
             // 
@@ -220,16 +235,20 @@
             this.button_Map.UseVisualStyleBackColor = true;
             this.button_Map.Click += new System.EventHandler(this.button_Map_Click);
             // 
-            // checkBox_Loot
+            // timer1
             // 
-            this.checkBox_Loot.AutoSize = true;
-            this.checkBox_Loot.Location = new System.Drawing.Point(38, 107);
-            this.checkBox_Loot.Name = "checkBox_Loot";
-            this.checkBox_Loot.Size = new System.Drawing.Size(105, 19);
-            this.checkBox_Loot.TabIndex = 17;
-            this.checkBox_Loot.Text = "Show Loot (F3)";
-            this.checkBox_Loot.UseVisualStyleBackColor = true;
-            this.checkBox_Loot.CheckedChanged += new System.EventHandler(this.checkBox_Loot_CheckedChanged);
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Location = new System.Drawing.Point(177, 107);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(87, 19);
+            this.checkBox1.TabIndex = 18;
+            this.checkBox1.Text = "No stamina";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
             // MainForm
             // 
@@ -271,6 +290,8 @@
         private Label label1;
         private TrackBar trackBar_Zoom;
         private CheckBox checkBox_Loot;
+        private System.Windows.Forms.Timer timer1;
+        private CheckBox checkBox1;
     }
 }
 

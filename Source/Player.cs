@@ -53,6 +53,7 @@ namespace eft_dma_radar
                 var isLocalPlayer = Memory.ReadBool(_playerBase + Offsets.PlayerBase_IsLocalPlayer);
                 if (isLocalPlayer)
                 {
+                    MainForm.Getlocalplayer(_playerBase);
                     Type = PlayerType.CurrentPlayer;
                     //_currentPlayerGroupID = GroupID;
                 }

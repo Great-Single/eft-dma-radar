@@ -25,6 +25,10 @@ namespace eft_dma_radar
         private Map _currentMap; // Current Selected Map
         private Bitmap _currentRender; // Currently rendered frame
         private const int _strokeWidth = 6;
+        private static ulong _playerBase = 0;
+        private ulong _physical;
+        private float value = 0;
+
         private Player CurrentPlayer
         {
             get
@@ -77,7 +81,11 @@ namespace eft_dma_radar
         {
             Width = _strokeWidth
         };
-
+        public static ulong Getlocalplayer(ulong playeraddress)
+        {
+            _playerBase = playeraddress;
+            return playeraddress;
+        }
 
         /// <summary>
         /// Constructor.
@@ -382,6 +390,45 @@ namespace eft_dma_radar
         private void checkBox_Loot_CheckedChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (InGame)
+            { 
+                ulong _stamina1 = Memory.ReadPtr(_physical + 0x28);
+                if (value == 0)
+                {
+                    value = Memory.ReadFloat(_stamina1 + 0x48);
+                }    
+                ulong _stamina2 = Memory.ReadPtr(_physical + 0x38);
+                ulong _stamina3 = Memory.ReadPtr(_physical + 0x30);
+                if (value != 0)
+                {
+                    Memory.WriteMemory(_stamina1 + 0x48, value);
+                    Memory.WriteMemory(_stamina2 + 0x48, value);
+                    Memory.WriteMemory(_stamina3 + 0x48, value);
+                }
+                else
+                {
+                    value = 1000f;
+                }
+               
+            }
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (this.checkBox1.Checked && _playerBase != 0)
+            {
+                _physical = Memory.ReadPtr(_playerBase + 0x4C8);
+                timer1.Start();
+            }
+            else if(!this.checkBox1.Checked && timer1.Enabled)
+            {
+                value = 0;
+                timer1.Stop();
+            }
         }
     }
 }

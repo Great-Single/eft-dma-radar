@@ -15,6 +15,7 @@ namespace eft_dma_radar
         public const uint RegisteredPlayers_Count = 0x18;
 
         public const uint PlayerBase_Profile = 0x4B8;
+        public const uint PlayerBase_Physical = 0x4C8;
         public const uint PlayerBase_MovementContext = 0x40;
         public const uint PlayerBase_IsLocalPlayer = 0x7FB;
         public static readonly uint[] PlayerBase_HealthController = new uint[] { 0x4F0, 0x50, Offsets.UnityDictBase };
@@ -26,7 +27,10 @@ namespace eft_dma_radar
         public const uint PlayerTransformInternal_Index = 0x40;
 
         public const uint PlayerTransfPMatrix_PlayerTransformDependencyIndexTableBase = 0x20;
-
+        public const uint Stamina = 0x38;
+        public const uint HandsStamina = 0x40;
+        public const uint Oxygen = 0x48;
+        public const uint Stamina_Value = 0x48;
         public const uint HealthEntry = 0x10;
         public const uint HealthEntry_Value = 0x10;
 

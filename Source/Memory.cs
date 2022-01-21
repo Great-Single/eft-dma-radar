@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using vmmsharp;
 
@@ -416,7 +417,25 @@ namespace eft_dma_radar
                 throw new DMAException($"ERROR reading UnityString at 0x{addr.ToString("X")}", ex);
             }
         }
-
+        private static byte[] StructureToBytes<T>(T value)
+        {
+            if (value == null)
+                return null;
+            BinaryFormatter bf = new BinaryFormatter();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                bf.Serialize(ms, value);
+                return ms.ToArray();
+            }
+        }
+        public static void WriteMemory<T>(ulong address, T value)
+        {
+            if (address != 0)
+            {
+                byte[] buffer = StructureToBytes<T>(value);
+                vmm.MemWrite(_pid, address, buffer);
+            }
+        }
         /// <summary>
         /// ToDo - Not sure if this is a good way to keep track if the process is still open
         /// </summary>
